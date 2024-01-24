@@ -1,0 +1,40 @@
+.sidebar {
+  display: flex;
+  z-index: 10002;
+}
+
+.active {
+  background-color: #f3523f;
+  border-radius: 50% 0px 50% 50%;
+  width: 56px;
+  height: 56px;
+}
+
+.active img {
+  filter: invert(100%);
+}
+
+.inactive {
+  width: 56px;
+  height: 56px;
+}
+
+.active,
+.inactive {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.active > img,
+.inactive > img {
+  width: 36px;
+  height: 30px;
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    display: none;
+  }
+
+}

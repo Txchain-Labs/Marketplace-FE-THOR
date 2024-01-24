@@ -1,0 +1,45 @@
+{
+  "include": [
+    "src",
+    "pages"
+  ],
+  "compilerOptions": {
+    "jsx": "preserve",
+    /* LANGUAGE COMPILATION OPTIONS */
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2020"
+    ],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    /* EMIT RULES */
+    "noEmit": true,
+    "sourceMap": true,
+    "removeComments": true,
+    /* TYPE CHECKING RULES */
+    "strict": true,
+    "strictNullChecks":false,
+    "noFallthroughCasesInSwitch": false,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "useUnknownInCatchVariables": true,
+    "noUncheckedIndexedAccess": true,
+    /* OTHER OPTIONS */
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "allowJs": true,
+    "incremental": true,
+    "isolatedModules": true
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}
