@@ -1,8 +1,16 @@
-import React from 'react';
-import { Landing } from '../src/modules/landing';
+import { FC, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-const Home = () => {
-  return <Landing />;
+const HomePage: FC = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    (async () => {
+      await router.push('/explore/collections');
+    })();
+  }, [router]);
+
+  return null;
 };
 
-export default Home;
+export default HomePage;

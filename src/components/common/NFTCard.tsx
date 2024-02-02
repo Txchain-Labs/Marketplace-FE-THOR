@@ -17,7 +17,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowForwardIos, KeyboardArrowUp } from '@mui/icons-material';
 
-import BuyNft from '../modals/BuyNft';
 import PlaceBid from '../modals/PlaceBid';
 import LikeButton from '../../components/common/LikeButton';
 import axios from 'axios';
@@ -78,7 +77,11 @@ const picSize = {
   height: { xs: '60px', sm: '65px', md: '96px', lg: '96px', xl: '96px' },
   width: { xs: '60px', sm: '65px', md: '96px', lg: '96px', xl: '96px' },
 };
-const artistName = { display: 'flex', mt: '13px', cursor: 'pointer' };
+const artistName = {
+  display: 'flex',
+  mt: '13px',
+  cursor: `url("/images/cursor-pointer.svg"), auto`,
+};
 const description = { display: 'flex', mt: '18px' };
 const button = { display: 'flex', mt: '8px' };
 const collectionDataStyle = {
@@ -145,7 +148,7 @@ const ownerStyle = {
 
 const main = {
   'position': 'relative',
-  'cursor': 'pointer',
+  'cursor': `url("/images/cursor-pointer.svg"), auto`,
   'background': 'inherit',
   'borderRadius': '0px',
   'padding': 0,
@@ -201,7 +204,6 @@ const NFTCard = (props: Props) => {
   const [bestOffer, setBestOffer] = useState('0');
   const [floorPrice, setFloorPrice] = useState('0');
   const [totalVolume, setTotalVolume] = useState('0');
-  // const [cacheBestOfferData, setCacheBestOfferData] = useState([]);
 
   const { data: volumes } = useGetVolume(
     collection?.address.toLowerCase() || ''
@@ -278,7 +280,6 @@ const NFTCard = (props: Props) => {
 
   const [hoverTimeout, setHoverTimeout] = useState(false);
 
-  const [open, setOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [openType] = useState('');
   const [openSnack, setOpenSnack] = useState(false);
@@ -375,18 +376,11 @@ const NFTCard = (props: Props) => {
     nfts,
   ]);
 
-  const openToast = () => {
-    setOpenSnack(true);
-    setTimeout(() => {
-      setOpenSnackSuccess(true);
-    }, 2000);
-  };
   const closeSnackbar = () => {
     setOpenSnack(false);
   };
 
   const handleClose = () => {
-    setOpen(false);
     setIsOpen(false);
   };
   const closeSnackbarSuccess = () => {
@@ -628,12 +622,7 @@ const NFTCard = (props: Props) => {
               </Grid>
             </InfiniteScroll>
           </Box>
-          <BuyNft open={open} handleClose={handleClose} openToast={openToast} />
-          <PlaceBid
-            open={isOpen}
-            handleClose={handleClose}
-            openToast={openToast}
-          />
+          <PlaceBid open={isOpen} handleClose={handleClose} />
           <Snackbar
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             open={openSnack}

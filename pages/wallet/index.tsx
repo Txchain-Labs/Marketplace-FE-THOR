@@ -73,11 +73,11 @@ const MobileInit = () => {
 
   const handleClickProfile = () => {
     if (activeCat === 'art') {
-      void router.push('/profile/prof#art');
+      void router.push('/profile/nftArtwork');
     } else void router.push('/profile/prof#node');
   };
   const handleClickActivity = () => {
-    void router.push('/profile');
+    void router.push('/activity');
   };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -94,7 +94,7 @@ const MobileInit = () => {
 
   const logoutHandler = () => {
     dispatch(authAction.clearStates());
-    void router.push('/');
+    void router.push('/about');
     handleClose();
     disconnect();
   };
@@ -216,7 +216,10 @@ const MobileInit = () => {
           </Box>
         </Box>
 
-        <MoreVertIcon sx={{ cursor: 'pointer' }} onClick={handleClick} />
+        <MoreVertIcon
+          sx={{ cursor: `url("/images/cursor-pointer.svg"), auto` }}
+          onClick={handleClick}
+        />
       </Stack>
       <Box
         sx={{

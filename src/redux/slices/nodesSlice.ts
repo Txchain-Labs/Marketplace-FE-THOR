@@ -6,7 +6,20 @@ export interface NodesState {
     orderBy: string | null;
     orderDirection: 'asc' | 'desc';
   };
-  filter: any;
+  filter: {
+    isModalOpen: boolean;
+    currency: number;
+    priceMin?: string;
+    priceMax?: string;
+    bids: {
+      privateBids: boolean;
+      bids: boolean;
+      noBids: boolean;
+    };
+    pendingRewardsMin?: string;
+    pendingRewardsMax?: string;
+    dueDate: number[];
+  };
 }
 
 const initialState: NodesState = {
@@ -15,7 +28,20 @@ const initialState: NodesState = {
     orderBy: 'avaxPriceInWei',
     orderDirection: 'desc',
   },
-  filter: {},
+  filter: {
+    isModalOpen: false,
+    currency: 0,
+    priceMin: '',
+    priceMax: '',
+    bids: {
+      privateBids: true,
+      bids: true,
+      noBids: true,
+    },
+    pendingRewardsMin: '',
+    pendingRewardsMax: '',
+    dueDate: [0, 30],
+  },
 };
 
 export const selectTier = (state: { nodes: NodesState }) => state.nodes.tier;
@@ -34,11 +60,38 @@ const nodesSlice = createSlice({
       state.sort = action.payload;
     },
     setFilter: (state, action) => {
-      state.filter = action.payload;
+      const { payload } = action;
+
+      state.filter.currency = payload.currency;
+      state.filter.priceMin = payload.priceMin;
+      state.filter.priceMax = payload.priceMax;
+      state.filter.bids = payload.bids;
+      state.filter.pendingRewardsMin = payload.pendingRewardsMin;
+      state.filter.pendingRewardsMax = payload.pendingRewardsMax;
+      state.filter.dueDate = payload.dueDate;
+    },
+    resetFilter: (state) => {
+      state.filter = {
+        ...initialState.filter,
+        isModalOpen: state.filter.isModalOpen,
+      };
+    },
+    openFilterModal: (state) => {
+      state.filter.isModalOpen = true;
+    },
+    closeFilterModal: (state) => {
+      state.filter.isModalOpen = false;
     },
   },
 });
 
-export const { setTier, setSort, setFilter } = nodesSlice.actions;
+export const {
+  setTier,
+  setSort,
+  setFilter,
+  resetFilter,
+  openFilterModal,
+  closeFilterModal,
+} = nodesSlice.actions;
 
 export default nodesSlice.reducer;

@@ -74,9 +74,8 @@ const StyledTabs = styled((props) => (
   '& .MuiButtonBase-root.MuiTab-root': {
     color: '#808080!important',
     marginBottom: 0,
-    fontFamily: 'Nexa',
+    fontFamily: 'Nexa-Bold',
     fontSize: '14px',
-    fontWeight: 600,
     lineHeight: '17px',
     letterSpacing: '0em',
     textAlign: 'left',
@@ -210,12 +209,12 @@ export default function ChatDialog({
     });
   }, [user, showNotificationBanner]);
 
-  useEffect(() => {
-    const html = document.querySelector('html');
-    if (html) {
-      html.style.overflow = open ? 'hidden' : 'auto';
-    }
-  }, [open]);
+  // useEffect(() => {
+  //   const html = document.querySelector('html');
+  //   if (html) {
+  //     html.style.overflow = open ? 'hidden' : 'auto';
+  //   }
+  // }, [open]);
 
   const SuggestionHeader: React.FC<SuggestionListHeaderProps> = (props) => {
     const { value } = props;
@@ -470,7 +469,7 @@ export default function ChatDialog({
                         'fontSize': '15px',
                         'lineHeight': '18px',
                         'color': '#ffffff',
-                        'cursor': 'pointer',
+                        'cursor': `url("/images/cursor-pointer.svg"), auto`,
                         'flex': 1,
                         'display': 'flex',
                         'justifyContent': 'left',

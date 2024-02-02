@@ -13,6 +13,7 @@ import {
   TokenNameType,
   tokensFuji,
   tokensMainnet,
+  usdceTokenAddress,
 } from '../utils/constants';
 
 import thorAbi from '../../public/abi/Thor.json';
@@ -20,15 +21,13 @@ import { useMarketplaceAddress } from './Marketplace';
 import { useChain } from '../utils/web3Utils';
 
 // Global cache time
-const balanceCacheTime = 5_000;
-
 export function useBalance(
   tokenName: TokenNameType,
   inputAddress?: string | undefined
 ) {
   const { address: connectedAddress } = useAccount();
-  const provider = useProvider();
   const address = (inputAddress || connectedAddress) as AddressString;
+  const provider = useProvider();
   const tokens =
     provider._network.chainId === 43_113 ? tokensFuji : tokensMainnet;
 
@@ -37,7 +36,7 @@ export function useBalance(
   const { data: avaxBalance } = useWagmiBalance({
     address: address,
     enabled: Boolean(address && tokenName === 'AVAX'),
-    cacheTime: balanceCacheTime,
+    watch: true,
   });
 
   const { data: tokenBalance } = useContractRead({
@@ -45,7 +44,7 @@ export function useBalance(
     abi: erc20ABI,
     functionName: 'balanceOf',
     args: [address],
-    cacheTime: balanceCacheTime,
+    watch: true,
     enabled: Boolean(address && tokenName === 'THOR'),
   });
 
@@ -54,7 +53,7 @@ export function useBalance(
     abi: erc20ABI,
     functionName: 'balanceOf',
     args: [address],
-    cacheTime: balanceCacheTime,
+    watch: true,
     enabled: Boolean(address && tokenName === 'USDCE'),
   });
 
@@ -94,7 +93,29 @@ export const useGetApprovalThor = (ownerAddress: string) => {
     functionName: 'allowance',
     args: [ownerAddress, marketplaceAddress],
     watch: true,
-    cacheTime: 60_000,
+    enabled: Boolean(marketplaceAddress && ownerAddress),
+  });
+};
+
+export const useSetApprovalUSDCE = () => {
+  const chain = useChain();
+  return useContractWrite({
+    mode: 'recklesslyUnprepared',
+    address: usdceTokenAddress(chain),
+    abi: erc20ABI,
+    functionName: 'approve',
+  });
+};
+
+export const useGetApprovalUSDCE = (ownerAddress: string) => {
+  const marketplaceAddress = useMarketplaceAddress();
+  const chain = useChain();
+  return useContractRead({
+    address: usdceTokenAddress(chain),
+    abi: erc20ABI,
+    functionName: 'allowance',
+    args: [ownerAddress as `0x${string}`, marketplaceAddress],
+    watch: true,
     enabled: Boolean(marketplaceAddress && ownerAddress),
   });
 };

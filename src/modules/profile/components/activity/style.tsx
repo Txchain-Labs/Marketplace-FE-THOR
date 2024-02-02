@@ -29,6 +29,12 @@ const infoContainer = {
   alignItems: 'center',
   justifyContent: 'space-around',
 };
+const infoContainer_mobile = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'flex-start',
+  mb: 1,
+};
 const typoStyle = {
   mr: 2.5,
   fontSize: 14,
@@ -42,6 +48,7 @@ const spanStyle = {
 export {
   button,
   infoContainer,
+  infoContainer_mobile,
   listContainer,
   listWrapper,
   spanStyle,

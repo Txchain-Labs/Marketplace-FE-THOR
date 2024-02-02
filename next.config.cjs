@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  productionBrowserSourceMaps: true,   
   // swcMinify: true,
   eslint: {
     ignoreDuringBuilds: false,
@@ -16,6 +17,11 @@ module.exports = {
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     });
+
+    config.alias = {
+      ...config.alias,
+      '@': path.resolve(__dirname, 'src'),
+    }
 
     return config;
   },

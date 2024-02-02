@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Image from 'next/image';
-import { useAccount, useWaitForTransaction } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { BigNumber, BigNumberish, ethers } from 'ethers';
 import {
   Grid,
@@ -21,7 +21,6 @@ import { styled, useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { IconButtonProps } from '@mui/material/IconButton';
 import { MODAL_TYPES, useGlobalModalContext } from './GlobleModal';
-import { palette } from '../../theme/palette';
 
 import { dottedAddress, formatDecimals } from '../../shared/utils/utils';
 import { formatNumber } from '../../utils/common';
@@ -30,10 +29,13 @@ import {
   useSetApprovalThor,
   useBalance,
   useGetApprovalThor,
+  useGetApprovalUSDCE,
+  useSetApprovalUSDCE,
 } from '../../hooks/useToken';
 import {
   useMarketplaceAddress,
   useExecuteOrder,
+  useGetTransaction,
 } from '../../hooks/Marketplace';
 import { useChain } from '../../utils/web3Utils';
 import {
@@ -44,24 +46,24 @@ import {
 } from '../../hooks/useOracle';
 import NFTSlider, { NFTSlide } from '../common/NFTSlider';
 import { resetAll } from '../../redux/slices/cartSlice';
-import SelectBox from '../common/SelectBox';
+import { Listing } from '@/models/Listing';
+import { ToastSeverity } from '@/redux/slices/toastSlice';
+import CurrencySelect from '@/components/common/CurrencySelect';
+import { Currency } from '@/components/common/CurrencySelect/CurrencySelect';
+import { Currencies } from '@/utils/constants';
+import AvaxIcon from '@/components/icons/currencies/Avax';
+import ThorIcon from '@/components/icons/currencies/Thor';
+import UsdceIcon from '@/components/icons/currencies/Usdce';
+import CloseIcon from '@mui/icons-material/Close';
+import { toAvax, toThor, toUsd } from '@/utils/helper';
 
-const currencies = [
-  {
-    value: 0,
-    label: 'AVAX',
-  },
-  {
-    value: 1,
-    label: 'THOR',
-  },
-];
+const currencyLabel = ['AVAX', 'THOR', 'USDC.e'];
 
 type Props = {
   open: boolean;
   handleClose: any;
   totalUsdPrice: number;
-  nfts: any[];
+  nfts: Listing[];
 };
 
 interface ExpandMoreProps extends IconButtonProps {
@@ -88,16 +90,17 @@ const BatchBuyNFTModal = (props: Props) => {
   const user = useSelector((state: any) => state.auth.user);
 
   const [approved, setApproved] = useState(true);
+  const [currencies, setCurrencies] = useState<Currency[]>(Currencies);
+
   const [currency, setCurrency] = useState(currencies[0].value);
   const [expanded, setExpanded] = useState(false);
   const [nftAddress, setNftAddress] = useState([]);
   const [tokenId, setTokenId] = useState([]);
-  const [priceByCurrency, setPriceByCurrency] = useState([[], []]);
+  const [priceByCurrency, setPriceByCurrency] = useState([[], [], []]);
 
   const chain = useChain();
   const { address: accountAddress } = useAccount();
   const marketplaceAddress = useMarketplaceAddress();
-  // const { data: order }: any = useGetOrderByNft(collectionAddress, tokenId);
 
   const dispatch = useDispatch();
 
@@ -108,6 +111,7 @@ const BatchBuyNFTModal = (props: Props) => {
 
   const balance = useBalance('AVAX');
   const thorBalance = useBalance('THOR');
+  const usdcBalance = useBalance('USDCE');
 
   const { data: usdFromThor } = useGetUsdFromThor('1', chain);
   const { data: usdFromAvax } = useGetUsdFromAvax('1', chain);
@@ -126,97 +130,90 @@ const BatchBuyNFTModal = (props: Props) => {
   } = useSetApprovalThor();
 
   const {
+    data: usdcTokenApproval,
+    refetch: refetchGetUsdcTokenApproval,
+    isLoading: getUsdcTokenApprovalLoading,
+  } = useGetApprovalUSDCE(accountAddress);
+  const {
+    write: approveUsdc,
+    isLoading: approveUsdcLoading,
+    isSuccess: setUsdcApprovalSuccess,
+  } = useSetApprovalUSDCE();
+
+  const buyNFTToast = {
+    message: 'NFTs Buying...',
+    severity: ToastSeverity.INFO,
+    image: nfts[0]?.image || 'images/nft-placeholder.png',
+    itemCount: nfts ? nfts?.length : 0,
+  };
+  const txnToast = {
+    message: 'NFTs Bought',
+    severity: ToastSeverity.SUCCESS,
+    image: nfts[0]?.image || 'images/nft-placeholder.png',
+    autoHideDuration: 5000,
+    itemCount: nfts ? nfts?.length : 0,
+  };
+  const {
     write,
     data: executeData,
     isLoading: isExecuteLoading,
-  } = useExecuteOrder();
+  } = useExecuteOrder(buyNFTToast);
   const { isLoading: transactionLoading, isSuccess: isTransactionSuccess } =
-    useWaitForTransaction({ hash: executeData?.hash });
+    useGetTransaction(executeData?.hash, txnToast);
 
   const totalPriceByCurrency = useMemo(() => {
-    if (!nfts || !avaxFromThor || !thorFromAvax)
-      return [BigNumber.from(0), BigNumber.from(0)];
+    if (!nfts || !avaxFromThor || !thorFromAvax || !usdFromAvax || !usdFromThor)
+      return [BigNumber.from(0), BigNumber.from(0), BigNumber.from(0)];
 
-    const _totalPriceByCurrency = [BigNumber.from(0), BigNumber.from(0)];
-    const _nftAddress: any[] = [];
-    const _tokenId: any[] = [];
-    const _priceByCurrency: any[] = [[], []];
+    const _totalPriceByCurrency = [
+      BigNumber.from(0),
+      BigNumber.from(0),
+      BigNumber.from(0),
+    ];
+    const _token_address: any[] = [];
+    const _token_id: any[] = [];
+    const _priceByCurrency: any[] = [[], [], []];
     const avaxPriceByNFT: any[] = [];
     const thorPriceByNFT: any[] = [];
-    nfts.forEach((item: any) => {
-      if (Number(item?.paymentType) === 0) {
-        _totalPriceByCurrency[0] = _totalPriceByCurrency[0].add(
-          BigNumber.from(item?.priceInWei)
+    const usdcPriceByNFT: any[] = [];
+    nfts.forEach((item: Listing) => {
+      const nftAvaxPrice = toAvax(
+          item.priceInWei,
+          item.paymentType,
+          avaxFromThor,
+          usdFromAvax
+        ),
+        nftThorPrice = toThor(
+          item.priceInWei,
+          item.paymentType,
+          thorFromAvax,
+          usdFromThor
+        ),
+        nftUsdPrice = toUsd(
+          item.priceInWei,
+          item.paymentType,
+          usdFromAvax,
+          usdFromThor
         );
-        avaxPriceByNFT.push(item?.priceInWei);
-        _totalPriceByCurrency[1] = _totalPriceByCurrency[1].add(
-          BigNumber.from(item?.priceInWei)
-            .mul(thorFromAvax as BigNumberish)
-            .div('1000000000000000000')
-        );
-        thorPriceByNFT.push(
-          BigNumber.from(item?.priceInWei)
-            .mul(thorFromAvax as BigNumberish)
-            .div('1000000000000000000')
-        );
-      } else {
-        _totalPriceByCurrency[0] = _totalPriceByCurrency[0].add(
-          BigNumber.from(item?.priceInWei)
-            .mul(avaxFromThor as BigNumberish)
-            .div('1000000000000000000')
-        );
-        avaxPriceByNFT.push(
-          BigNumber.from(item?.priceInWei)
-            .mul(avaxFromThor as BigNumberish)
-            .div('1000000000000000000')
-        );
-        _totalPriceByCurrency[1] = _totalPriceByCurrency[1].add(
-          BigNumber.from(item?.priceInWei)
-        );
-        thorPriceByNFT.push(item?.priceInWei);
-      }
-      _nftAddress.push(item.nftAddress);
-      _tokenId.push(item.tokenId);
+
+      _totalPriceByCurrency[0] = _totalPriceByCurrency[0].add(nftAvaxPrice);
+      avaxPriceByNFT.push(nftAvaxPrice);
+      thorPriceByNFT.push(nftThorPrice);
+      usdcPriceByNFT.push(nftUsdPrice);
+      _totalPriceByCurrency[1] = _totalPriceByCurrency[1].add(nftThorPrice);
+      _totalPriceByCurrency[2] = _totalPriceByCurrency[2].add(nftUsdPrice);
+
+      _token_address.push(item.nftAddress);
+      _token_id.push(item.tokenId);
     });
     _priceByCurrency[0] = avaxPriceByNFT;
     _priceByCurrency[1] = thorPriceByNFT;
-    setNftAddress(_nftAddress);
-    setTokenId(_tokenId);
+    _priceByCurrency[2] = usdcPriceByNFT;
+    setNftAddress(_token_address);
+    setTokenId(_token_id);
     setPriceByCurrency(_priceByCurrency);
     return _totalPriceByCurrency;
-  }, [nfts, thorFromAvax, avaxFromThor]);
-
-  // const priceByTokens = useMemo(() => {
-  //   if (!order || !avaxFromThor || !thorFromAvax)
-  //     return [BigNumber.from(0), BigNumber.from(0), BigNumber.from(0)];
-
-  //   const { price } = order;
-
-  //   const changedPriceByTokens = [];
-
-  //   // Listed by AVAX
-  //   if (Number((order as any).paymentType) === 0) {
-  //     changedPriceByTokens[0] = BigNumber.from(price);
-  //     changedPriceByTokens[1] = BigNumber.from(price)
-  //       .mul(thorFromAvax as BigNumberish)
-  //       .div('1000000000000000000');
-  //     changedPriceByTokens[2] = BigNumber.from(price)
-  //       .mul(usdFromAvax as BigNumberish)
-  //       .div('1000000000000000000');
-  //   }
-  //   // Listed by THOR
-  //   else {
-  //     changedPriceByTokens[0] = BigNumber.from(price)
-  //       .mul(avaxFromThor as BigNumberish)
-  //       .div('1000000000000000000');
-  //     changedPriceByTokens[1] = BigNumber.from(price);
-  //     changedPriceByTokens[2] = BigNumber.from(price)
-  //       .mul(usdFromThor as BigNumberish)
-  //       .div('1000000000000000000');
-  //   }
-
-  //   return changedPriceByTokens;
-  // }, [order, avaxFromThor, thorFromAvax, usdFromThor, usdFromAvax]);
+  }, [nfts, thorFromAvax, avaxFromThor, usdFromAvax, usdFromThor]);
 
   const isInsufficientBalance = useMemo(() => {
     return (
@@ -226,35 +223,90 @@ const BatchBuyNFTModal = (props: Props) => {
           Number(
             ethers.utils.formatEther(totalPriceByCurrency[currency] || 0)
           )) ||
-      (currency !== 0 &&
+      (currency === 1 &&
         thorBalance &&
         Number(formatDecimals(thorBalance)) <
-          Number(ethers.utils.formatEther(totalPriceByCurrency[currency] || 0)))
+          Number(
+            ethers.utils.formatEther(totalPriceByCurrency[currency] || 0)
+          )) ||
+      (currency === 2 &&
+        usdcBalance &&
+        Number(formatDecimals(usdcBalance, 6)) <
+          Number(
+            ethers.utils.formatUnits(totalPriceByCurrency[currency] || 0, 6)
+          ))
     );
-  }, [balance, thorBalance, currency, totalPriceByCurrency]);
+  }, [currency, balance, totalPriceByCurrency, thorBalance, usdcBalance]);
 
   const usdBalancePrice = React.useMemo(() => {
-    if (balance || thorBalance) {
+    if (balance || thorBalance || usdcBalance) {
       const tempTotalPrice =
-        currency === 0 ? formatDecimals(balance) : formatDecimals(thorBalance);
+        currency === 0
+          ? formatDecimals(balance)
+          : currency === 1
+          ? formatDecimals(thorBalance)
+          : formatDecimals(usdcBalance, 6);
       return (
         Number(tempTotalPrice) *
         (currency === 0
           ? usdFromAvax
             ? Number(ethers.utils.formatEther(usdFromAvax as BigNumberish))
             : 0
-          : usdFromThor
-          ? Number(ethers.utils.formatEther(usdFromThor as BigNumberish))
-          : 0)
+          : currency === 1
+          ? usdFromThor
+            ? Number(ethers.utils.formatEther(usdFromThor as BigNumberish))
+            : 0
+          : 1)
       );
     } else {
       return 0;
     }
-  }, [balance, thorBalance, currency, usdFromAvax, usdFromThor]);
+  }, [balance, thorBalance, usdcBalance, currency, usdFromAvax, usdFromThor]);
+
+  useEffect(() => {
+    const availablePaymentType = [true, true, true];
+    const currencyArr: Currency[] = [];
+    for (const item of nfts) {
+      availablePaymentType[0] &&= item.acceptPayments[0] !== '0';
+      availablePaymentType[1] &&= item.acceptPayments[1] !== '0';
+      availablePaymentType[2] &&= item.acceptPayments[2] !== '0';
+      if (
+        +availablePaymentType[0] +
+          +availablePaymentType[1] +
+          +availablePaymentType[2] ===
+        0
+      ) {
+        break;
+      }
+    }
+    availablePaymentType.forEach((type, index) => {
+      if (type) {
+        currencyArr.push({
+          value: index,
+          text: currencyLabel[index],
+          icon:
+            index === 0 ? (
+              <AvaxIcon viewBox={'0 0 18 15'} />
+            ) : index === 1 ? (
+              <ThorIcon viewBox={'0 0 25 20'} />
+            ) : (
+              <UsdceIcon viewBox={'0 0 15 14'} />
+            ),
+        });
+      }
+    });
+    setCurrencies(currencyArr);
+    setCurrency(currencyArr[0].value);
+  }, [nfts]);
+
   // Refetch approval amount when approval success
   useEffect(() => {
     refetchGetApproval();
   }, [setApprovalSuccess, refetchGetApproval]);
+
+  useEffect(() => {
+    refetchGetUsdcTokenApproval();
+  }, [setUsdcApprovalSuccess, refetchGetUsdcTokenApproval]);
 
   // Set approved state
   useEffect(() => {
@@ -262,20 +314,23 @@ const BatchBuyNFTModal = (props: Props) => {
       setApproved(
         totalPriceByCurrency[currency].lte(tokenApproval as BigNumberish)
       );
+    } else if (usdcTokenApproval && currency === 2) {
+      setApproved(
+        totalPriceByCurrency[currency].lte(usdcTokenApproval as BigNumberish)
+      );
     } else {
       setApproved(false);
     }
     if (currency === 0) {
       setApproved(true);
     }
-
-    console.log('totalPriceByCurrency----------' + totalPriceByCurrency);
   }, [
     currency,
     tokenApproval,
     setApprovalSuccess,
     approveThorLoading,
     totalPriceByCurrency,
+    usdcTokenApproval,
   ]);
 
   useEffect(() => {
@@ -285,10 +340,8 @@ const BatchBuyNFTModal = (props: Props) => {
     }
   }, [isTransactionSuccess, handleClose, dispatch]);
 
-  const handleSelectCurrency: React.ChangeEventHandler<HTMLSelectElement> = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setCurrency(Number(event.target.value));
+  const handleSelectCurrency = (value: number) => {
+    setCurrency(value);
   };
 
   const handleBuyOrApproval = async () => {
@@ -306,6 +359,13 @@ const BatchBuyNFTModal = (props: Props) => {
     // Approve when purchase by THOR
     if (!approved && currency === 1) {
       approveThor({
+        recklesslySetUnpreparedArgs: [
+          marketplaceAddress,
+          totalPriceByCurrency[currency],
+        ],
+      });
+    } else if (!approved && currency === 2) {
+      approveUsdc({
         recklesslySetUnpreparedArgs: [
           marketplaceAddress,
           totalPriceByCurrency[currency],
@@ -329,13 +389,6 @@ const BatchBuyNFTModal = (props: Props) => {
       });
     }
   };
-
-  useEffect(() => {
-    const html = document.querySelector('html');
-    if (html) {
-      html.style.overflow = open ? 'hidden' : 'auto';
-    }
-  }, [open]);
 
   const handleExpandClick = () => {
     setExpanded(!expanded);
@@ -409,7 +462,7 @@ const BatchBuyNFTModal = (props: Props) => {
                     sx={{
                       width: matchSmDown ? '100%' : '190px',
                       height: '26px',
-                      background: palette.primary.fire,
+                      bgcolor: 'primary.main',
                       display: 'flex',
                       justifyContent: 'center',
                       aligItems: 'center',
@@ -419,7 +472,10 @@ const BatchBuyNFTModal = (props: Props) => {
                   >
                     <Typography
                       variant="p-md"
-                      sx={{ color: '#fff', fontSize: { miniMobile: '12px' } }}
+                      sx={{
+                        color: 'primary.contrastText',
+                        fontSize: { miniMobile: '12px' },
+                      }}
                     >
                       Buying NFTs
                     </Typography>
@@ -434,6 +490,7 @@ const BatchBuyNFTModal = (props: Props) => {
                             title: item.metadata?.name,
                           } as NFTSlide)
                       )}
+                      key={'NFTSlider'}
                       direction={matchLgUp ? 'vertical' : 'horizontal'}
                       size={matchSmDown ? 'small' : 'medium'}
                       hideTitle={matchSmDown}
@@ -447,17 +504,22 @@ const BatchBuyNFTModal = (props: Props) => {
               <Box
                 sx={{
                   // height: '590px',
-                  background: '#FAFAFA',
+                  bgcolor: 'background.paper',
                   boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.24)',
                   p: 3,
                   position: 'relative',
                 }}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
-                  onClick={handleClose}
+                  sx={{
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                  }}
                 >
-                  <Image src="/images/cross.svg" width={16} height={16} />
+                  <IconButton aria-label="close" onClick={handleClose}>
+                    <CloseIcon />
+                  </IconButton>
                 </Box>
                 <Box>
                   <Typography
@@ -468,19 +530,19 @@ const BatchBuyNFTModal = (props: Props) => {
                       letterSpacing: '0.04em',
                     }}
                   >
-                    Buy nodes
+                    Buy Assets
                   </Typography>
                   {/* ============= */}
                   <Box
-                    sx={{
+                    sx={(theme) => ({
                       display: { miniMobile: 'content', sm: 'block' },
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       mb: 0.2,
                       mt: 3,
                       p: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.3)',
-                    }}
+                      border: `1px solid ${theme.palette.divider}`,
+                    })}
                   >
                     <Box
                       sx={{ display: 'flex', justifyContent: 'space-between' }}
@@ -553,10 +615,17 @@ const BatchBuyNFTModal = (props: Props) => {
                                 parseFloat(
                                   Number(formatDecimals(balance)).toFixed(3)
                                 )) + ' AVAX'
-                            : (thorBalance &&
+                            : currency === 1
+                            ? (thorBalance &&
                                 parseFloat(
                                   Number(formatDecimals(thorBalance)).toFixed(3)
-                                )) + ' THOR'}
+                                )) + ' THOR'
+                            : (usdcBalance &&
+                                parseFloat(
+                                  Number(
+                                    formatDecimals(usdcBalance, 6)
+                                  ).toFixed(3)
+                                )) + ' USDC.e'}
                         </Typography>
                         <Typography
                           sx={{ fontSize: '12px', textAlign: 'right' }}
@@ -590,7 +659,7 @@ const BatchBuyNFTModal = (props: Props) => {
                         </Typography>
                         <Box
                           display={'flex'}
-                          sx={{ color: '#4C4C4C', alignItems: 'center' }}
+                          sx={{ color: 'text.secondary', alignItems: 'center' }}
                         >
                           <Typography variant="p-md">Details</Typography>
                           <ExpandMore
@@ -606,7 +675,7 @@ const BatchBuyNFTModal = (props: Props) => {
                       <Collapse
                         in={expanded}
                         timeout="auto"
-                        sx={{ pb: '5px', color: '#4C4C4C' }}
+                        sx={{ pb: '5px', color: 'text.secondary' }}
                         unmountOnExit
                       >
                         <CardContent
@@ -660,7 +729,7 @@ const BatchBuyNFTModal = (props: Props) => {
                         inputProps={{
                           sx: {
                             fontSize: '18px',
-                            color: 'rgba(0, 0, 0, 0.24)',
+                            // color: 'rgba(0, 0, 0, 0.9)',
                             with: '100%',
                           },
                         }}
@@ -669,16 +738,17 @@ const BatchBuyNFTModal = (props: Props) => {
                         name="price"
                         value={parseFloat(
                           Number(
-                            ethers.utils.formatEther(
-                              totalPriceByCurrency[currency] || 0
-                            )
+                            currency === 2
+                              ? ethers.utils.formatUnits(
+                                  totalPriceByCurrency[currency] || 0,
+                                  6
+                                )
+                              : ethers.utils.formatEther(
+                                  totalPriceByCurrency[currency] || 0
+                                )
                           ).toFixed(3)
                         )}
                         type="number"
-                        // onChange={handleChangePrice}
-                        // onBlur={handleBlur}
-                        // error={bidPriceError.isError}
-                        // helperText={bidPriceError.message}
                         id="price"
                         label={
                           <Typography
@@ -692,36 +762,11 @@ const BatchBuyNFTModal = (props: Props) => {
                       />
                     </Box>
 
-                    <Box
-                      sx={{
-                        'display': 'flex',
-                        // position: 'absolute',
-                        'alignItems': 'center',
-                        'top': '15px',
-                        'left': '70%',
-                        'borderBottom': '1px solid rgba(0, 0, 0)',
-                        'borderRight': '1px solid rgba(0, 0, 0)',
-                        '&:hover': {
-                          borderBottom: '2px solid rgba(0, 0, 0)',
-                          borderRight: '2px solid rgba(0, 0, 0)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ m: '0px 12px 0px 8px' }}>
-                        <Image
-                          src={`/images/${
-                            currency === 0 ? 'avax' : 'thor'
-                          }Icon.svg`}
-                          height={14}
-                          width={14}
-                          objectFit="contain"
-                        />
-                      </Box>
-                      <SelectBox
-                        onChange={handleSelectCurrency}
-                        defaultValue={currency}
-                        options={currencies}
+                    <Box mt={'13px'}>
+                      <CurrencySelect
+                        currencies={currencies}
                         value={currency}
+                        onChange={handleSelectCurrency}
                       />
                     </Box>
                   </Box>
@@ -730,7 +775,7 @@ const BatchBuyNFTModal = (props: Props) => {
                     <Typography
                       sx={{
                         fontSize: '12px',
-                        color: 'rgba(0, 0, 0, 0.24)',
+                        color: 'text.secondary',
                       }}
                     >
                       {`${formatNumber(totalUsdPrice)} USD`}
@@ -751,16 +796,23 @@ const BatchBuyNFTModal = (props: Props) => {
                     <Typography variant="lbl-lg">
                       {parseFloat(
                         Number(
-                          ethers.utils.formatEther(
-                            totalPriceByCurrency[currency] || 0
-                          )
+                          currency === 2
+                            ? ethers.utils.formatUnits(
+                                totalPriceByCurrency[currency] || 0,
+                                6
+                              )
+                            : ethers.utils.formatEther(
+                                totalPriceByCurrency[currency] || 0
+                              )
                         )?.toFixed(3)
                       )}{' '}
-                      {currencies[currency].label}
+                      {currencyLabel[currency]}
                     </Typography>
                   </Box>
                   {isInsufficientBalance && (
-                    <Box sx={{ mt: 3, textAlign: 'center', color: 'red' }}>
+                    <Box
+                      sx={{ mt: 3, textAlign: 'center', color: 'primary.main' }}
+                    >
                       <Typography variant="p-md">
                         Insufficient balance
                       </Typography>
@@ -771,16 +823,17 @@ const BatchBuyNFTModal = (props: Props) => {
                       disabled={
                         isInsufficientBalance ||
                         getApprovalLoading ||
+                        getUsdcTokenApprovalLoading ||
+                        approveUsdcLoading ||
                         approveThorLoading ||
                         isExecuteLoading ||
                         transactionLoading
                       }
                       variant="contained"
+                      fullWidth
                       onClick={handleBuyOrApproval}
                       sx={{
                         borderRadius: '0%',
-                        width: '100%',
-                        maxWidth: '100%',
                       }}
                     >
                       <Typography variant="p-md">

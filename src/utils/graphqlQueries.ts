@@ -5,6 +5,7 @@ export const fetchBidsQuery = (orderId: string | undefined) => {
         priceInWei
         bidder
         expiresAt
+        expiredAt
         blockTimestamp
         paymentType
       }
@@ -22,6 +23,7 @@ export const fetchOtcBidsQuery = (nftAddress: any, tokenId: any) => {
             bidder
             blockTimestamp
             expiresAt
+            expiredAt
           }
           id
           address
@@ -33,7 +35,7 @@ export const fetchNFTsQuery = (userAddress: any) => {
   if (userAddress) {
     return `
     query {
-      listings(where: {sellerAddress: "${userAddress.toLowerCase()}"}) {
+      listings(where: {sellerAddress: "${userAddress.toLowerCase()}", isInvalidOwner: false}) {
         tokenId
         nftAddress
         priceInWei
@@ -68,6 +70,7 @@ export const fetchBidsForNftQuery = (nftAddress: string, tokenId: any) => {
           tokenId
           bidder
           priceInWei
+          paymentType
           expiresAt
           blockTimestamp
         }
@@ -91,7 +94,7 @@ export const fetchListingQuery = (address: string) => {
   return `
     query
       {
-        listings(where: {nftAddress: "${address.toLowerCase()}"}, orderBy: priceInWei, orderDirection: asc, first: 1) {
+        listings(where: {nftAddress: "${address.toLowerCase()}", isInvalidOwner: false}, orderBy: priceInWei, orderDirection: asc, first: 1) {
           paymentType
           priceInWei
           nftAddress
@@ -103,7 +106,7 @@ export const fetchFloorPriceQuery = (address: string, paymentType: any) => {
   return `
     query
       {
-        listings(where: {nftAddress: "${address.toLowerCase()}", paymentType: ${paymentType}}, orderBy: priceInWei, orderDirection: asc, first: 1) {
+        listings(where: {nftAddress: "${address.toLowerCase()}", paymentType: ${paymentType}, isInvalidOwner: false}, orderBy: priceInWei, orderDirection: asc, first: 1) {
           paymentType
           priceInWei
           nftAddress
@@ -152,7 +155,7 @@ export const fetchListingsQuery = (
   return `
     query
       {
-        listings (where: {nftAddress:"${nftAddress.toLowerCase()}"} skip: ${start} first: ${limit}){
+        listings (where: {nftAddress:"${nftAddress.toLowerCase()}", isInvalidOwner: false} skip: ${start} first: ${limit}){
           id
           sellerAddress
           nftAddress
@@ -163,11 +166,27 @@ export const fetchListingsQuery = (
       }`;
 };
 
+export const fetchListingsByUserQuery = (userAddress: any) => {
+  if (userAddress) {
+    return `
+    query {
+      listings(where: {sellerAddress: "${userAddress.toLowerCase()}", isInvalidOwner: false}) {
+        tokenId
+        nftAddress
+        priceInWei
+      }
+    }
+    `;
+  } else {
+    return '';
+  }
+};
+
 export const fetchListingByTokenId = (nftAddress: string, tokenId: number) => {
   return `
     query
       {
-        listings (where: {nftAddress:"${nftAddress.toLowerCase()}", tokenId:"${tokenId}"}){
+        listings (where: {nftAddress:"${nftAddress.toLowerCase()}", tokenId:"${tokenId}", isInvalidOwner: false}){
           id
           sellerAddress
           nftAddress
@@ -240,6 +259,7 @@ export const fetchActivitiesBidderSeller = (address: string, cnt: number) => {
           user
           priceInWei
           paymentType
+          transactionHash
         }
       }`;
 };
@@ -275,6 +295,20 @@ export const fetchReceivedBids = (ownerAddress: string) => {
         listingPrice
         listingPricePaymentType
         expiresAt
+      }
+    }`;
+};
+
+export const fetchStakedDriftNodes = (ownerAddress: string) => {
+  return `
+  query
+    {
+      stakedNFTs(where: {ownerAddress: "${ownerAddress?.toLowerCase()}"}, first: 500) {
+        id
+        ownerAddress
+        tokenId
+        odin
+        stakedTimestamp
       }
     }`;
 };

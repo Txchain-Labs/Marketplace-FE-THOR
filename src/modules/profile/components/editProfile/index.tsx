@@ -8,42 +8,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import { AuthService } from '../../../../services/auth.service';
 import { authAction } from '../../../../redux/slices/authSlice';
 import CircularProgress from '@mui/material/CircularProgress';
-import Link from 'next/link';
 import { dottedAddress } from '../../../../shared/utils/utils';
 import dayjs from 'dayjs';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useRouter } from 'next/router';
-import { palette } from '../../../../theme/palette';
 
-const btn = {
-  'height': 50,
-  'width': '100%',
-  'maxWidth': 158,
-  'border': '1px solid black',
-  'borderRadius': '0px',
-  'background': palette.primary.storm,
-  'color': '#fff',
-  '&:hover': {
-    border: '1px solid black',
-    borderRadius: '0px',
-    background: palette.primary.storm,
-    color: '#fff',
-  },
-  'fontSize': '19px',
-  'fontWeight': 700,
-};
-const btnCancel = {
-  height: 50,
-  width: '100%',
-  maxWidth: 158,
-  border: '1px solid black',
-  borderRadius: '0px',
-  background: '#fff',
-  color: palette.primary.storm,
-  fontSize: '19px',
-  fontWeight: 700,
-};
+import PageContainer from '@/layouts/PageContainer';
 
 interface MyFormValues {
   name: string;
@@ -104,12 +75,12 @@ const EditProfile = () => {
           twitter: values.twitter || '',
           discord: values.discord || '',
           display_name: values.name || '',
-          profile_picture: image || '/images/profile-yellow.svg',
+          profile_picture: image || '/images/profile-pic.svg',
         };
         AuthService.editUser(user?.id, data)
           .then(async (res) => {
             dispatch(authAction.setUser(res.data.data));
-            void router.push('/profile');
+            void router.push('/profile/edit');
           })
           .catch((err) => {
             console.log(err?.response?.data?.message);
@@ -167,246 +138,269 @@ const EditProfile = () => {
     }
   };
 
-  console.log('err', errors);
   return (
-    <form onSubmit={handleSubmit}>
-      <Box mt="60px">
-        <Container>
-          <Grid container justifyContent="center">
-            <Grid
-              item
-              md={8}
-              sm={8}
-              xs={11}
-              miniMobile={11}
-              sx={{ display: 'flex' }}
-            >
-              <Box
-                position={'relative'}
-                sx={{
-                  height: 80,
-                  width: 80,
-                  border: '1px dashed rgba(0, 0, 0, 0.5)',
-                  borderRadius: '10px',
-                  p: 0.5,
-                  display: 'flex',
-                  flexDirection: 'row',
-                }}
+    <PageContainer fullHeight>
+      <form onSubmit={handleSubmit}>
+        <Box pt="60px">
+          <Container>
+            <Grid container justifyContent="center">
+              <Grid
+                item
+                md={8}
+                sm={8}
+                xs={11}
+                miniMobile={11}
+                sx={{ display: 'flex' }}
               >
-                <Avatar
-                  src={preview || image || '/images/profile-yellow.svg'}
-                  sx={{ height: 70, width: 70 }}
-                ></Avatar>
-
-                <IconButton
-                  // variant="contained"
-                  edge="start"
-                  color="inherit"
-                  aria-label="menu"
-                  sx={{ mr: 2, position: 'absolute', right: -22, bottom: -7 }}
-                  // sx={{ borderRadius: '0px' }}
-                  component="label"
+                <Box
+                  position={'relative'}
+                  sx={{
+                    height: 80,
+                    width: 80,
+                    border: '1px dashed rgba(0, 0, 0, 0.5)',
+                    borderRadius: '10px',
+                    p: 0.5,
+                    display: 'flex',
+                    flexDirection: 'row',
+                  }}
                 >
-                  <Box
+                  <Avatar
+                    src={preview || image || '/images/profile-pic.svg'}
+                    sx={{ height: 70, width: 70 }}
+                  ></Avatar>
+
+                  <IconButton
+                    // variant="contained"
+                    edge="start"
+                    color="inherit"
+                    aria-label="menu"
+                    sx={{ mr: 2, position: 'absolute', right: -22, bottom: -7 }}
+                    // sx={{ borderRadius: '0px' }}
+                    component="label"
+                  >
+                    <Box
+                      sx={{
+                        // height: 24,
+                        // width: 24,
+                        borderRadius: '50%',
+                        background: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px dashed rgba(0, 0, 0, 0.5)',
+                      }}
+                    >
+                      {imageLoading ? (
+                        <CircularProgress
+                          size="small"
+                          sx={{ width: 20, color: 'secondary.yellow' }}
+                        />
+                      ) : (
+                        <EditIcon sx={{ fontSize: 'medium' }} />
+                      )}
+                    </Box>
+                    <input
+                      type="file"
+                      style={{ display: 'none' }}
+                      // ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleUPloadFile}
+                    />
+                  </IconButton>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', ml: 4 }}>
+                  <Typography
+                    variant="h4"
+                    fontWeight={700}
                     sx={{
-                      // height: 24,
-                      // width: 24,
-                      borderRadius: '50%',
-                      background: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px dashed rgba(0, 0, 0, 0.5)',
+                      fontSize: { xs: '22px', md: '32px' },
+                      lineHeight: { xs: '33px', md: '55px' },
                     }}
                   >
-                    {imageLoading ? (
-                      <CircularProgress
-                        size="small"
-                        sx={{ width: 20, color: 'secondary.yellow' }}
-                      />
-                    ) : (
-                      <EditIcon sx={{ fontSize: 'medium' }} />
-                    )}
-                  </Box>
-                  <input
-                    type="file"
-                    style={{ display: 'none' }}
-                    // ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleUPloadFile}
-                  />
-                </IconButton>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', ml: 4 }}>
-                <Typography
-                  variant="h4"
-                  fontWeight={700}
+                    {user?.username}
+                  </Typography>
+                  <Typography
+                    sx={{ typography: { sm: 'p-lg-bk', miniMobile: 'body1' } }}
+                  >
+                    {dottedAddress(user?.address)}
+                  </Typography>
+                  <Typography
+                    fontWeight={400}
+                    sx={{
+                      typography: { sm: 'p-lg-bk', miniMobile: 'body1' },
+                      fontStyle: 'italic',
+                    }}
+                    mt={1}
+                  >
+                    Joined {dayjs(user.joined_date).format('MMMM YYYY')}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid
+                item
+                xs={4}
+                sx={{
+                  display: { sm: 'flex', miniMobile: 'none' },
+                }}
+              >
+                <Button
+                  variant={'outlined'}
+                  color={'secondary'}
+                  sx={{ width: '168px' }}
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
+
+                <Box m="0px 10px" />
+
+                <Button
+                  variant={'contained'}
+                  color={'secondary'}
+                  sx={{ width: '168px' }}
+                  type="submit"
+                >
+                  {loading ? 'Loading' : 'Save'}
+                </Button>
+              </Grid>
+
+              <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={4}>
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  name="name"
+                  label="User Name *"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={
+                    (touched.name && Boolean(errors.name)) ||
+                    isUserNameDuplicated
+                  }
+                  helperText={
+                    (touched.name && errors.name) ||
+                    (isUserNameDuplicated && ' User name already taken!')
+                  }
                   sx={{
-                    fontSize: { xs: '22px', md: '32px' },
-                    lineHeight: { xs: '33px', md: '55px' },
+                    '& input': {
+                      fontSize: { xs: '18px', md: '40px' },
+                      marginLeft: '3px',
+                    },
+                    '& label': {
+                      fontSize: { xs: '14px', md: '20px' },
+                      lineHeight: { xs: '35px', md: '80px' },
+                    },
                   }}
-                >
-                  {user?.username}
-                </Typography>
-                <Typography
-                  sx={{ typography: { sm: 'p-lg-bk', miniMobile: 'body1' } }}
-                >
-                  {dottedAddress(user?.address)}
-                </Typography>
-                <Typography
-                  fontWeight={400}
+                />
+              </Grid>
+              <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={2}>
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  name="bio"
+                  label="Short Bio *"
+                  value={values.bio}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.bio && Boolean(errors.bio)}
+                  helperText={touched.bio && errors.bio}
                   sx={{
-                    typography: { sm: 'p-lg-bk', miniMobile: 'body1' },
-                    fontStyle: 'italic',
+                    '& input': {
+                      fontSize: { xs: '18px', md: '40px' },
+                      marginLeft: '3px',
+                    },
+                    '& label': {
+                      fontSize: { xs: '14px', md: '20px' },
+                      lineHeight: { xs: '35px', md: '80px' },
+                    },
                   }}
-                  mt={1}
+                />
+              </Grid>
+              <Grid item md={12} xs={11} miniMobile={11} mt={2}>
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  name="discord"
+                  label="Discord Name *"
+                  value={values.discord}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.discord && Boolean(errors.discord)}
+                  helperText={touched.discord && errors.discord}
+                  sx={{
+                    '& input': {
+                      fontSize: { xs: '18px', md: '40px' },
+                      marginLeft: '3px',
+                    },
+                    '& label': {
+                      fontSize: { xs: '14px', md: '20px' },
+                      lineHeight: { xs: '35px', md: '80px' },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={2}>
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  name="twitter"
+                  label="Twitter *"
+                  value={values.twitter}
+                  onBlur={handleBlur}
+                  error={touched.twitter && Boolean(errors.twitter)}
+                  helperText={touched.twitter && errors.twitter}
+                  onChange={handleChange}
+                  sx={{
+                    '& input': {
+                      fontSize: { xs: '18px', md: '40px' },
+                      marginLeft: '3px',
+                    },
+                    '& label': {
+                      fontSize: { xs: '14px', md: '20px' },
+                      lineHeight: { xs: '35px', md: '80px' },
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid
+                item
+                miniMobile={11}
+                md={4}
+                sm={6}
+                xs={11}
+                sx={{
+                  display: { sm: 'none', miniMobile: 'flex' },
+
+                  justifyContent: 'center',
+                  mt: { miniMobile: 4 },
+                }}
+              >
+                <Button
+                  variant={'contained'}
+                  color={'secondary'}
+                  fullWidth
+                  type="submit"
                 >
-                  Joined {dayjs(user.joined_date).format('MMMM YYYY')}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid
-              item
-              xs={4}
-              sx={{
-                display: { sm: 'flex', miniMobile: 'none' },
-              }}
-            >
-              <Link href="/profile">
-                <Button sx={btnCancel}>Cancel</Button>
-              </Link>
-              <Box m="0px 10px" />
+                  {loading ? 'Loading' : 'Save'}
+                </Button>
+                <Box m="0px 10px" />
 
-              <Button sx={btn} type="submit">
-                {loading ? 'Loading' : 'Save'}
-              </Button>
+                <Button
+                  variant={'outlined'}
+                  color={'secondary'}
+                  fullWidth
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
+              </Grid>
             </Grid>
-
-            <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={4}>
-              <TextField
-                fullWidth
-                variant="standard"
-                name="name"
-                label="User Name *"
-                value={values.name}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={
-                  (touched.name && Boolean(errors.name)) || isUserNameDuplicated
-                }
-                helperText={
-                  (touched.name && errors.name) ||
-                  (isUserNameDuplicated && ' User name already taken!')
-                }
-                sx={{
-                  '& input': {
-                    fontSize: { xs: '18px', md: '40px' },
-                    marginLeft: '3px',
-                  },
-                  '& label': {
-                    fontSize: { xs: '14px', md: '20px' },
-                    lineHeight: { xs: '35px', md: '80px' },
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={2}>
-              <TextField
-                fullWidth
-                variant="standard"
-                name="bio"
-                label="Short Bio *"
-                value={values.bio}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.bio && Boolean(errors.bio)}
-                helperText={touched.bio && errors.bio}
-                sx={{
-                  '& input': {
-                    fontSize: { xs: '18px', md: '40px' },
-                    marginLeft: '3px',
-                  },
-                  '& label': {
-                    fontSize: { xs: '14px', md: '20px' },
-                    lineHeight: { xs: '35px', md: '80px' },
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item md={12} xs={11} miniMobile={11} mt={2}>
-              <TextField
-                fullWidth
-                variant="standard"
-                name="discord"
-                label="Discord Name *"
-                value={values.discord}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.discord && Boolean(errors.discord)}
-                helperText={touched.discord && errors.discord}
-                sx={{
-                  '& input': {
-                    fontSize: { xs: '18px', md: '40px' },
-                    marginLeft: '3px',
-                  },
-                  '& label': {
-                    fontSize: { xs: '14px', md: '20px' },
-                    lineHeight: { xs: '35px', md: '80px' },
-                  },
-                }}
-              />
-            </Grid>
-
-            <Grid item md={12} sm={12} xs={11} miniMobile={11} mt={2}>
-              <TextField
-                fullWidth
-                variant="standard"
-                name="twitter"
-                label="Twitter *"
-                value={values.twitter}
-                onBlur={handleBlur}
-                error={touched.twitter && Boolean(errors.twitter)}
-                helperText={touched.twitter && errors.twitter}
-                onChange={handleChange}
-                sx={{
-                  '& input': {
-                    fontSize: { xs: '18px', md: '40px' },
-                    marginLeft: '3px',
-                  },
-                  '& label': {
-                    fontSize: { xs: '14px', md: '20px' },
-                    lineHeight: { xs: '35px', md: '80px' },
-                  },
-                }}
-              />
-            </Grid>
-
-            <Grid
-              item
-              miniMobile={11}
-              md={4}
-              sm={6}
-              xs={11}
-              sx={{
-                display: { sm: 'none', miniMobile: 'flex' },
-
-                justifyContent: 'center',
-                mt: { miniMobile: 4 },
-              }}
-            >
-              <Button sx={btn} type="submit">
-                {loading ? 'Loading' : 'Save'}
-              </Button>
-              <Box m="0px 10px" />
-
-              <Link href="/profile">
-                <Button sx={btnCancel}>Cancel</Button>
-              </Link>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-    </form>
+          </Container>
+        </Box>
+      </form>
+    </PageContainer>
   );
 };
 

@@ -249,7 +249,11 @@ const AcceptBid = (props: Props) => {
                 }}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
+                  sx={{
+                    position: 'absolute',
+                    right: 20,
+                    cursor: `url("/images/cursor-pointer.svg"), auto`,
+                  }}
                   onClick={handleClose}
                 >
                   <Image src="/images/cross.svg" width={16} height={16} />
@@ -354,7 +358,9 @@ const AcceptBid = (props: Props) => {
                       {acceptBidType === bidType.DEFAULT
                         ? Number(bidData?.paymentType) === 0
                           ? 'AVAX'
-                          : 'THOR'
+                          : Number(bidData?.paymentType) === 1
+                          ? 'THOR'
+                          : 'USD'
                         : 'USD'}
                     </Typography>
                   </Box>
@@ -372,7 +378,9 @@ const AcceptBid = (props: Props) => {
                       {acceptBidType === bidType.DEFAULT
                         ? Number(bidData?.paymentType) === 0
                           ? 'AVAX'
-                          : 'THOR'
+                          : Number(bidData?.paymentType) === 1
+                          ? 'THOR'
+                          : 'USD'
                         : 'USD'}
                     </Typography>
                   </Box>
@@ -390,7 +398,9 @@ const AcceptBid = (props: Props) => {
                       {acceptBidType === bidType.DEFAULT
                         ? Number(bidData?.paymentType) === 0
                           ? 'AVAX'
-                          : 'THOR'
+                          : Number(bidData?.paymentType) === 1
+                          ? 'THOR'
+                          : 'USD'
                         : 'USD'}
                     </Typography>
                   </Box>
@@ -402,6 +412,7 @@ const AcceptBid = (props: Props) => {
                     <Button
                       type="submit"
                       variant="contained"
+                      fullWidth
                       disabled={
                         getApprovalLoading ||
                         acceptBidLoading ||
@@ -410,8 +421,6 @@ const AcceptBid = (props: Props) => {
                       }
                       sx={{
                         'borderRadius': '0%',
-                        'width': '100%',
-                        'maxWidth': '100%',
                         ':disabled': {
                           backgroundColor: '#F3523F',
                           color: 'white',

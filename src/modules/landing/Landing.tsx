@@ -364,7 +364,7 @@ const bottom_examples = {
 };
 
 const view_lightpaper = {
-  // cursor: 'pointer',
+  // cursor: `url("/images/cursor-pointer.svg"), auto`,
   position: 'absolute',
   top: '50%',
   left: '50%',
@@ -473,7 +473,14 @@ const Landing = () => {
                       rel="noreferrer noopener"
                       href="https://docs.capsule.gg"
                     >
-                      <Button variant="nft_common" sx={View_Litepaper_btn}>
+                      <Button
+                        variant={'contained'}
+                        fullWidth
+                        sx={{
+                          ...View_Litepaper_btn,
+                          clipPath: 'none !important',
+                        }}
+                      >
                         View Litepaper
                       </Button>
                     </a>
@@ -566,13 +573,21 @@ const Landing = () => {
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={2}>
-                      <Link href={optionIndex === 1 ? '/explore' : '/'}>
+                      <Link
+                        href={
+                          optionIndex === 0
+                            ? '/gameloop'
+                            : optionIndex === 1
+                            ? '/explore'
+                            : '/about'
+                        }
+                      >
                         <Button
-                          variant="nft_common"
-                          sx={btn}
-                          disabled={optionIndex !== 1}
+                          variant={'contained'}
+                          sx={{ ...btn, clipPath: 'none !important' }}
+                          disabled={optionIndex === 2}
                         >
-                          {optionIndex === 1
+                          {optionIndex !== 2
                             ? optionButBuf[optionIndex]
                             : 'Coming Soon'}
                         </Button>
@@ -588,23 +603,116 @@ const Landing = () => {
             <Grid xs={12} sm={12} md={6} lg={7}>
               <Link
                 //href="https://docs.thorfi.io/project-information/overview"
-                href="https://docs.capsule.gg"
-                style={{ cursor: 'pointer' }}
+                href="/manager/capsules"
+                style={{ cursor: `url("/images/cursor-pointer.svg"), auto` }}
               >
                 <a
                   target="_blank"
                   rel="noreferrer noopener"
                   //href="https://docs.thorfi.io/project-information/overview"
-                  href="https://docs.capsule.gg"
+                  href="/manager/capsules"
                 >
-                  <Box sx={left_wide_circle} style={{ cursor: 'pointer' }}>
+                  <Box
+                    sx={left_wide_circle}
+                    style={{
+                      cursor: `url("/images/cursor-pointer.svg"), auto`,
+                    }}
+                  >
                     <img
                       src="/images/circle_background.png"
                       width="100%"
-                      style={{ cursor: 'pointer' }}
+                      style={{
+                        cursor: `url("/images/cursor-pointer.svg"), auto`,
+                      }}
                     />
-                    <Box sx={view_lightpaper} style={{ cursor: 'pointer' }}>
-                      <img src="/images/view_lightpaper.svg" width="90%" />
+                    <Box
+                      sx={view_lightpaper}
+                      style={{
+                        cursor: `url("/images/cursor-pointer.svg"), auto`,
+                      }}
+                    >
+                      <svg
+                        width="580"
+                        height="350"
+                        viewBox="0 0 290 175"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <g clip-path="url(#clip0_1_884)">
+                          <path
+                            d="M8.73545 60.2654H0.223374V22.9675L22.9706 0.220215H60.3486V6.72944"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M68.8604 6.73462V19.9383H36.9501L21.9388 34.9496V66.7748H8.73009V29.4819L31.4824 6.73462H68.8604Z"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M68.8604 6.73457L60.3483 0.225342"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M8.73145 66.7746L0.219375 60.2654"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                        </g>
+                        <g clip-path="url(#clip1_1_884)">
+                          <path
+                            d="M278.431 101.735L286.943 101.735L286.943 139.033L264.195 161.78L226.817 161.78L226.817 155.271"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M218.306 155.265L218.306 142.062L250.216 142.062L265.227 127.05L265.227 95.2253L278.436 95.2253L278.436 132.518L255.684 155.265L218.306 155.265Z"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M218.306 155.265L226.818 161.775"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                          <path
+                            d="M278.435 95.2254L286.947 101.735"
+                            stroke="#F3523F"
+                            stroke-miterlimit="10"
+                          />
+                        </g>
+
+                        <text
+                          fill={'#111111'}
+                          x="80"
+                          y="80"
+                          fontSize="18px"
+                          fontFamily="Nexa-Bold"
+                          cursor={`url("/images/cursor-pointer.svg"), auto`}
+                        >
+                          Go to Collections
+                        </text>
+
+                        <defs>
+                          <clipPath id="clip0_1_884">
+                            <rect
+                              width="69.083"
+                              height="67"
+                              fill="white"
+                              transform="matrix(-1 0 0 1 69.083 0)"
+                            />
+                          </clipPath>
+                          <clipPath id="clip1_1_884">
+                            <rect
+                              width="69.083"
+                              height="67"
+                              fill="white"
+                              transform="matrix(1 1.74846e-07 1.74846e-07 -1 218.083 162)"
+                            />
+                          </clipPath>
+                        </defs>
+                      </svg>
                     </Box>
                   </Box>
                 </a>
@@ -621,7 +729,7 @@ const Landing = () => {
                     lineHeight="164%"
                     fontFamily="Nexa-Bold"
                   >
-                    ThorFi Node <br />
+                    ThorFi NFT <br />
                     Collection
                   </Typography>
                 </Box>
@@ -639,8 +747,11 @@ const Landing = () => {
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={2} sx={{ mt: 5 }}>
-                  <Link href="/thorfi/nodes">
-                    <Button variant="nft_common" sx={collection_btn}>
+                  <Link href="/explore/collections">
+                    <Button
+                      variant={'contained'}
+                      sx={{ ...collection_btn, clipPath: 'none !important' }}
+                    >
                       View Collections
                     </Button>
                   </Link>
@@ -676,17 +787,12 @@ const Landing = () => {
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={2} sx={{ mt: 5 }}>
-                  <Link href="/">
-                    {/* <Button variant="nft_common" sx={collection_btn}>
-                      Go to GameLoop
-                          </Button> */}
-
+                  <Link href="/gameloop/gamification/keycards">
                     <Button
-                      variant="nft_common"
-                      sx={collection_btn}
-                      disabled={true}
+                      variant={'contained'}
+                      sx={{ ...collection_btn, clipPath: 'none !important' }}
                     >
-                      Coming Soon
+                      Go to GameLoop
                     </Button>
                   </Link>
                 </Stack>
@@ -735,7 +841,10 @@ const Landing = () => {
                 </Typography>
               </Box>
               <Link href="/explore">
-                <Button variant="nft_common" sx={bottom_collection_btn}>
+                <Button
+                  variant={'contained'}
+                  sx={{ ...bottom_collection_btn, clipPath: 'none !important' }}
+                >
                   Explore Capsule
                 </Button>
               </Link>

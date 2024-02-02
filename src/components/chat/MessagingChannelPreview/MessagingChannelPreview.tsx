@@ -86,7 +86,11 @@ const MessagingChannelPreview = (props: MessagingChannelPreviewProps) => {
       <div className={styles['channel-preview__content-wrapper']}>
         <div className={styles['channel-preview__content-top']}>
           <div className={styles['channel-preview__content']}>
-            <Avatar alt="Remy Sharp" src={photo} sx={{ cursor: 'pointer' }} />
+            <Avatar
+              alt="Remy Sharp"
+              src={photo}
+              sx={{ cursor: `url("/images/cursor-pointer.svg"), auto` }}
+            />
             <div className={styles['channel-preview__content-name_message']}>
               <p className={styles['channel-preview__content-name']}>
                 {getChannelName(members) || getChannelName(members)}

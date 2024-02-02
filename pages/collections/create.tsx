@@ -21,13 +21,15 @@ const createSchema = object({
   description: string().required('Discription is required'),
   image: mixed()
     .required('A file is required')
-    .test('fileSize', 'File too large', (value) => {
-      return value && (value as any).size <= FILE_SIZE;
-    })
+    .test(
+      'fileSize',
+      'File too large',
+      (value: any) => value && value.size <= FILE_SIZE
+    )
     .test(
       'fileFormat',
       'Unsupported Format',
-      (value) => value && SUPPORTED_FORMATS.includes((value as any).type)
+      (value: any) => value && SUPPORTED_FORMATS.includes(value.type)
     ),
 });
 interface MyFormValues {
@@ -148,7 +150,8 @@ const Create = () => {
                 }}
               >
                 <Button
-                  variant="contained"
+                  variant={'contained'}
+                  fullWidth
                   sx={{ borderRadius: '0px' }}
                   component="label"
                 >
@@ -229,7 +232,7 @@ const Create = () => {
                   label="Description*"
                   variant="standard"
                 />
-                <Button variant="contained" type="submit">
+                <Button variant="contained" fullWidth type="submit">
                   {loading ? (
                     <CircularProgress size={30} sx={{ color: 'white' }} />
                   ) : (

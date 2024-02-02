@@ -1,7 +1,6 @@
 import { Box } from '@mui/material';
 import { useSelector } from 'react-redux';
-import AlertModal from '../modals/AlertModal';
-import { useState } from 'react';
+import { MODAL_TYPES, useGlobalModalContext } from '@/components/modals';
 
 export default function LikeButton({
   id,
@@ -19,8 +18,15 @@ export default function LikeButton({
   likeNFTHandler2?: (collectionAddr: string, nftId: string) => void;
 }) {
   const { user } = useSelector((state: any) => state.auth);
-  const [openAlert, setOpenAlert] = useState(false);
 
+  const { showModal } = useGlobalModalContext();
+
+  const handleOpenConnectWalletModal = () => {
+    showModal(MODAL_TYPES.CONNECT_WALLET, {
+      title: 'Create instance form',
+      confirmBtn: 'Save',
+    });
+  };
   return (
     <Box>
       <div
@@ -42,7 +48,8 @@ export default function LikeButton({
                   ? likeNFTHandler(id)
                   : likeNFTHandler2(collectionAddr, nftId);
               } else {
-                setOpenAlert(true);
+                // setOpenAlert(true);
+                handleOpenConnectWalletModal();
               }
             }}
           />
@@ -109,13 +116,6 @@ export default function LikeButton({
           </label>
         </div>
       </div>
-
-      <AlertModal
-        onClose={() => {
-          setOpenAlert(false);
-        }}
-        open={openAlert}
-      />
     </Box>
   );
 }

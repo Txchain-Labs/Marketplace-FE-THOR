@@ -17,6 +17,7 @@ import NetworkAlert from './modals/NetworkAlert';
 import { useChain } from '../utils/web3Utils';
 
 import { isMobile, isTablet, isDesktop } from 'react-device-detect';
+import { resetBag } from '@/redux/slices/managerBagSlice';
 
 type JWTDataType = {
   address: string;
@@ -103,6 +104,7 @@ const Signin = () => {
   };
   useEffect(() => {
     if (!address) {
+      dispatch(resetBag()); // reset manager bag on account disconnect
       return;
     }
 
@@ -122,14 +124,16 @@ const Signin = () => {
     }
     if (address) {
       console.log('desktop', isMobile, isDesktop, isTablet);
-      if (!isMobile) {
-        authenticate();
-      } else {
-        setShowModal(true);
-      }
+      authenticate();
+
+      // if (!isMobile) {
+      //   authenticate();
+      // } else {
+      //   setShowModal(true);
+      // }
       return;
     }
-  }, [address, token, chain, authenticate]);
+  }, [address, token, chain, authenticate, dispatch]);
 
   return (
     <>
@@ -233,9 +237,13 @@ const Signin = () => {
                     Please complete this signature to connect to Capsule.
                   </Typography>
                   <Button
-                    variant="nft_common"
+                    variant={'contained'}
+                    fullWidth
                     onClick={authenticate}
-                    sx={_btn}
+                    sx={{
+                      ..._btn,
+                      clipPath: 'none !important',
+                    }}
                     id="sign-message-modal"
                   >
                     Sign message

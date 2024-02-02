@@ -10,7 +10,7 @@ export interface Collection {
   cover_image?: string;
   profile_image?: string;
   category?: string;
-  collection_size?: number;
+  collection_size?: string;
   is_thor_collection?: boolean;
   is_erc731?: boolean;
   is_erc1155?: boolean;
@@ -21,4 +21,16 @@ export interface Collection {
   web?: string;
   listed_time?: string;
   update_time?: string;
+  totalVolumeAvax?: string;
+  totalVolumeThor?: string;
+  totalTrades?: string;
+  listedCount?: string;
+  totalSupply?: string;
+  floorPrice?: number;
+  floor_price?: string;
+  totalVolume?: number;
+  total_volume_usd?: string;
+  volumeChanged?: number;
+  volume_changed?: number;
+  ownersCount?: number;
 }

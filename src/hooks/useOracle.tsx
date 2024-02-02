@@ -27,7 +27,7 @@ export const useGetUsdFromAvax = (amount: string, chain: any) => {
   });
 };
 export const useGetAvaxFromUsd = (amount: string, chain: any) => {
-  return useContractRead({
+  return useContractRead<any, any, BigNumber>({
     address: getOracleAddress(chain),
     abi: oracleAbi,
     functionName: 'usd2avax',
@@ -45,7 +45,7 @@ export const useGetThorFromUsd = (amount: string, chain: any) => {
   });
 };
 export const useGetAvaxFromThor = (amount: string, chain: any) => {
-  return useContractRead({
+  return useContractRead<any, any, BigNumber>({
     address: getOracleAddress(chain),
     abi: oracleAbi,
     functionName: 'thor2Avax',
@@ -54,7 +54,7 @@ export const useGetAvaxFromThor = (amount: string, chain: any) => {
   });
 };
 export const useGetThorFromAvax = (amount: string, chain: any) => {
-  return useContractRead({
+  return useContractRead<any, any, BigNumber>({
     address: getOracleAddress(chain),
     abi: oracleAbi,
     functionName: 'avax2thor',

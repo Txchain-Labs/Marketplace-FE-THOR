@@ -1,15 +1,18 @@
 import {
   fetchListingsQuery,
+  fetchListingsByUserQuery,
   fetchListingByTokenId,
   fetchOtcBidsQuery,
   fetchBidsForNftQuery,
+  bidderActiveBids,
+  fetchReceivedBids,
 } from '../utils/graphqlQueries';
 import { getSubgraphUrl } from '../utils/constants';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useChain } from '../utils/web3Utils';
 import { useSelector } from 'react-redux';
-import { Listing } from '../models/Listing';
+import { ActiveBid, Listing } from '../models/Listing';
 
 export const useGetListings = (
   contractAddress: any,
@@ -121,7 +124,7 @@ export const useGetListingByNft = (
     return axios({
       url: subgraphUrl,
       method: 'post',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Authorization': null },
       data: {
         query: listingsQuery,
       },
@@ -134,6 +137,33 @@ export const useGetListingByNft = (
     {
       refetchInterval: 2 * 60 * 1000,
       enabled: Boolean(contractAddress && tokenId),
+    }
+  );
+};
+
+export const useListingsByUser = (user: string) => {
+  const refetch = useSelector((state: any) => state.txn.refetch);
+  const chain = useChain();
+  const subgraphUrl = getSubgraphUrl(chain?.id);
+  const listingsByUserQuery = fetchListingsByUserQuery(user?.toLowerCase());
+
+  async function fetchListingsByUser() {
+    return axios({
+      url: subgraphUrl,
+      method: 'post',
+      headers: { 'content-type': 'application/json', 'Authorization': null },
+      data: {
+        query: listingsByUserQuery,
+      },
+    });
+  }
+
+  return useQuery(
+    ['listings by user', user, chain, refetch],
+    fetchListingsByUser,
+    {
+      refetchInterval: 60_000,
+      enabled: Boolean(user),
     }
   );
 };
@@ -158,4 +188,62 @@ export const funcGetBidsByTokenId = (
   const bidQuery = fetchBidsForNftQuery(contractAddress, tokenId);
 
   return funcGetGraphQuery(bidQuery, subgraphUrl);
+};
+
+export const useGetActiveBids = (bidderAddress: string) => {
+  const chain = useChain();
+  const subgraphUrl = getSubgraphUrl(chain?.id);
+  const activeBidsQuery = bidderActiveBids(bidderAddress);
+
+  const getActiveBids = () =>
+    new Promise<ActiveBid[]>((resolve, reject) => {
+      axios({
+        url: subgraphUrl,
+        method: 'post',
+        headers: { 'content-type': 'application/json', 'Authorization': null },
+        data: {
+          query: activeBidsQuery,
+        },
+      })
+        .then((response) => {
+          resolve(response?.data?.data?.activeBids);
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    });
+
+  return useQuery(['getActiveBids', chain, bidderAddress], getActiveBids, {
+    refetchInterval: 30_000,
+    enabled: !!bidderAddress,
+  });
+};
+
+export const useGetReceivedBids = (ownerAddress: string) => {
+  const chain = useChain();
+  const subgraphUrl = getSubgraphUrl(chain?.id);
+  const receivedBidsQuery = fetchReceivedBids(ownerAddress);
+
+  const getReceivedBids = () =>
+    new Promise<ActiveBid[]>((resolve, reject) => {
+      axios({
+        url: subgraphUrl,
+        method: 'post',
+        headers: { 'content-type': 'application/json', 'Authorization': null },
+        data: {
+          query: receivedBidsQuery,
+        },
+      })
+        .then((response) => {
+          resolve(response?.data?.data?.activeBids);
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    });
+
+  return useQuery(['getReceivedBids', chain, ownerAddress], getReceivedBids, {
+    refetchInterval: 30_000,
+    enabled: !!ownerAddress,
+  });
 };

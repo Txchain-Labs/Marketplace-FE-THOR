@@ -22,46 +22,44 @@ export default function AlertDialog({ open, onClose }: SimpleDialogProps) {
   };
 
   return (
-    <div style={{ zIndex: 1000002 }}>
-      <Dialog
-        open={open}
-        sx={{ zIndex: 10000002 }}
-        onClose={onClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        {/* <DialogTitle id="alert-dialog-title">
+    <Dialog
+      open={open}
+      sx={{ zIndex: 10000002 }}
+      onClose={onClose}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+    >
+      {/* <DialogTitle id="alert-dialog-title">
                     {"Use Google's location service?"}
                 </DialogTitle> */}
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Please connect metamask first
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
+      <DialogContent>
+        <DialogContentText id="alert-dialog-description">
+          Please connect metamask first
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
 
-              onClose();
-            }}
-          >
-            Disagree
-          </Button>
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
+            onClose();
+          }}
+        >
+          Disagree
+        </Button>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
 
-              onConnectWallet();
-            }}
-            autoFocus
-          >
-            Agree
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+            onConnectWallet();
+          }}
+          autoFocus
+        >
+          Agree
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

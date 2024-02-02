@@ -134,7 +134,11 @@ const BuyNft = ({ open, handleClose, openToast }: Props) => {
                 }}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
+                  sx={{
+                    position: 'absolute',
+                    right: 20,
+                    cursor: `url("/images/cursor-pointer.svg"), auto`,
+                  }}
                   onClick={handleClose}
                 >
                   <Image src="/images/cross.svg" width={16} height={16} />
@@ -262,11 +266,10 @@ const BuyNft = ({ open, handleClose, openToast }: Props) => {
                   <Box sx={{ display: 'flex', mt: 5, width: '100%' }}>
                     <Button
                       variant="contained"
+                      fullWidth
                       onClick={handleClick}
                       sx={{
                         borderRadius: '0%',
-                        width: '100%',
-                        maxWidth: '100%',
                       }}
                     >
                       <Typography variant="p-md">Proceed to payment</Typography>

@@ -210,9 +210,15 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
-    "name": "RewardsActivated",
+    "name": "RewardsActivationStatus",
     "type": "event"
   },
   {
@@ -358,31 +364,20 @@
         "internalType": "address",
         "name": "minter",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
+      },
+      {
+        "internalType": "bool",
+        "name": "isRewardsActivated",
+        "type": "bool"
+      },
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "vestedDays",
         "type": "uint256"
-      }
-    ],
-    "name": "activateRewards",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "activationFee",
-    "outputs": [
+      },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "claimDay",
         "type": "uint256"
       }
     ],
@@ -564,6 +559,87 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getNode",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "creationTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastClaimTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "multiplier",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardPerNode",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardsActivatedTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRewardsActivated",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "vestedDays",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "claimDay",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct NODERewardManagementNFTV4.NodeEntity",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "account",
         "type": "address"
@@ -605,16 +681,6 @@
         "internalType": "string",
         "name": "_tierName",
         "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_activationFee",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "_oracle",
-        "type": "address"
       },
       {
         "internalType": "string",
@@ -725,6 +791,21 @@
             "internalType": "address",
             "name": "minter",
             "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRewardsActivated",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "vestedDays",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "claimDay",
+            "type": "uint256"
           }
         ],
         "internalType": "struct NODERewardManagementNFTV4.NodeEntity[]",
@@ -1145,11 +1226,16 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "newFee",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "multiplier",
         "type": "uint256"
       }
     ],
-    "name": "updateFee",
+    "name": "updateMultiplier",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1162,12 +1248,19 @@
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "multiplier",
-        "type": "uint256"
+        "internalType": "bool",
+        "name": "activate",
+        "type": "bool"
       }
     ],
-    "name": "updateMultiplier",
+    "name": "updateRewardsStatus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "updateTimeParamFujis",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

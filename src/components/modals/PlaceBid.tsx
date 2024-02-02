@@ -4,25 +4,27 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import {
   Box,
+  FormControl,
   Grid,
+  IconButton,
+  InputLabel,
+  NativeSelect,
   TextField,
   Typography,
-  InputLabel,
-  FormControl,
-  NativeSelect,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
+import { Close, TimerSharp } from '@mui/icons-material';
 import Image from 'next/image';
 import { useSelector } from 'react-redux';
 import { MODAL_TYPES, useGlobalModalContext } from './GlobleModal';
-import { palette } from '../../theme/palette';
 import {
-  useGetOrderByNft,
   useGetBidByNft,
-  usePlaceBid,
-  useOtcPlaceBid,
+  useGetOrderByNft,
   useGetOtcBid,
   useMarketplaceAddress,
-  useGetTransaction,
+  useOtcPlaceBid,
+  usePlaceBid,
 } from '../../hooks/Marketplace';
 import {
   dottedAddress,
@@ -30,11 +32,12 @@ import {
   formatDecimalsV2,
 } from '../../shared/utils/utils';
 import {
-  useSetApprovalThor,
   useBalance,
   useGetApprovalThor,
+  useGetApprovalUSDCE,
+  useSetApprovalThor,
+  useSetApprovalUSDCE,
 } from '../../hooks/useToken';
-// import dayjs from 'dayjs';
 import { BigNumberish, ethers } from 'ethers';
 import { bidType } from '../../utils/constants';
 import {
@@ -51,15 +54,15 @@ import {
 } from '../../hooks/useOracle';
 import { ToastSeverity } from '../../redux/slices/toastSlice';
 import { useSetAttribute } from '../../hooks/uiHooks';
-import SelectBox from '../common/SelectBox';
+import CurrencySelect from '@/components/common/CurrencySelect';
 
 type Props = {
   open: boolean;
   handleClose?: any;
-  openToast?: any;
   placingBid?: (val: boolean) => void | undefined;
   collectionAddress?: string | undefined;
   tokenId?: number | undefined;
+  acceptPayments?: any[];
   nft?: { image: string | undefined; title: string | undefined } | undefined;
   activeBidType?: string;
 };
@@ -69,12 +72,11 @@ const PlaceBid = (props: Props) => {
     open,
     handleClose,
     collectionAddress,
+    acceptPayments,
     tokenId,
     nft,
-    placingBid,
     activeBidType = bidType.DEFAULT,
   } = props;
-  console.log('nft', nft);
   const user = useSelector((state: any) => state.auth.user);
   const { showModal } = useGlobalModalContext();
   const { data: order } = useGetOrderByNft(collectionAddress, tokenId);
@@ -90,72 +92,63 @@ const PlaceBid = (props: Props) => {
     collectionAddress,
     Number(tokenId)
   );
+
   const balance = useBalance('AVAX');
   const thorBalance = useBalance('THOR');
-  const currencies = getValidCurrency(isNode);
+  const usdcBalance = useBalance('USDCE');
+
   const [bidPrice, setBidPrice] = React.useState('0');
-  const [lastPrice, setLastPrice] = React.useState([]); // [avax, thor]
-  // const [usdPrice, setUsdPrice] = React.useState(0);
-  const [isLastPrice, setIsLastPrice] = React.useState(false);
+  const [lastPrice, setLastPrice] = React.useState([]); // [avax, thor, usdc]
   const [daysToExpire, setDaysToExpire] = React.useState(7);
   const [tempPrice, setTempPrice] = React.useState('0');
-  const [currency, setCurrency] = React.useState(currencies[0].value);
 
-  console.log('currency', currency, balance, thorBalance);
   const [isFirstBid, setIsFirstBid] = React.useState(true);
 
   const expiryTimestamp = React.useMemo(() => {
-    // const newDate = dayjs().add(daysToExpire, 'day');
-    // const timestamp = Math.ceil(Number(newDate as any as number) / 1000);
-    // return timestamp;
     return Number(daysToExpire) * 86400; //  days * total seconds in a day
   }, [daysToExpire]);
   const marketplaceAddress = useMarketplaceAddress();
 
-  const {
-    write: approveThor,
-    isLoading: approveThorLoading,
-    isSuccess: setApprovalSuccess,
-  } = useSetApprovalThor();
-  const {
-    data: tokenApproval,
-    refetch: refetchGetApproval,
-    isLoading: getApprovalLoading,
-  } = useGetApprovalThor(accountAddress);
+  const { write: approveThor, isLoading: approveThorLoading } =
+    useSetApprovalThor();
+  const { data: tokenApproval, isLoading: getApprovalLoading } =
+    useGetApprovalThor(accountAddress);
+
+  const { data: usdcTokenApproval, isLoading: getUsdcTokenApprovalLoading } =
+    useGetApprovalUSDCE(accountAddress);
+  const { write: approveUsdc, isLoading: approveUsdcLoading } =
+    useSetApprovalUSDCE();
+
+  const { data: thorPrice } = useGetUsdFromThor('1', chain);
+  const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
+  const { data: avaxFromThor } = useGetAvaxFromThor('1', chain);
+  const { data: thorFromAvax } = useGetThorFromAvax('1', chain);
+
+  const currencies = getValidCurrency(isNode, acceptPayments);
+
+  const [currency, setCurrency] = React.useState(currencies[0].value);
+
   const nftImage = nft?.image;
-  const placeBidToast = {
-    message: 'Bid Placing...',
-    severity: ToastSeverity.INFO,
-    image: nftImage,
-    autoHideDuration: 5000,
-  };
+
   const txnToast = {
     message: 'Bid Placed',
     severity: ToastSeverity.SUCCESS,
     image: nftImage,
     autoHideDuration: 5000,
   };
-  const {
-    data: placeBidData,
-    write: writePlaceBid,
-    isLoading: placeBidLoading,
-  } = usePlaceBid(placeBidToast);
-  const {
-    data: otcPlaceBidData,
-    write: writeOtcPlaceBid,
-    isLoading: otcPlaceBidLoading,
-  } = useOtcPlaceBid(placeBidToast);
-  useGetTransaction(otcPlaceBidData?.hash || placeBidData?.hash, txnToast);
-
-  React.useEffect(() => {
-    refetchGetApproval();
-  }, [setApprovalSuccess, refetchGetApproval]);
+  const { write: writePlaceBid } = usePlaceBid(txnToast);
+  const { write: writeOtcPlaceBid } = useOtcPlaceBid(txnToast);
 
   React.useEffect(() => {
     if (tokenApproval && currency === 1) {
       setApproved(
-        Number(tempPrice) <
+        Number(tempPrice) <=
           Number(ethers.utils.formatEther(tokenApproval as BigNumberish))
+      );
+    } else if (usdcTokenApproval && currency === 2) {
+      setApproved(
+        Number(tempPrice) <=
+          Number(ethers.utils.formatUnits(usdcTokenApproval as BigNumberish, 6))
       );
     } else {
       setApproved(false);
@@ -163,7 +156,7 @@ const PlaceBid = (props: Props) => {
     if (currency === 0) {
       setApproved(true);
     }
-  }, [currency, tempPrice, tokenApproval]);
+  }, [currency, tempPrice, tokenApproval, usdcTokenApproval]);
 
   const handleChangePrice = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event?.target.value.length < 20) {
@@ -176,14 +169,9 @@ const PlaceBid = (props: Props) => {
   };
 
   React.useEffect(() => {
-    if (placeBidLoading || otcPlaceBidLoading) {
-      // placingBid(true);
-    }
-  }, [placeBidLoading, otcPlaceBidLoading, placingBid]);
-
-  React.useEffect(() => {
     let price = '0';
-    if ((lastBid || lastOtcBid) && order) {
+    let paymentType = 0;
+    if (order) {
       if (
         (lastBid as any)?.bidder ===
           '0x0000000000000000000000000000000000000000' &&
@@ -191,61 +179,100 @@ const PlaceBid = (props: Props) => {
           '0x0000000000000000000000000000000000000000'
       ) {
         setIsFirstBid(true);
-        price = formatDecimalsV2((order as any)?.price);
+        paymentType = (order as any)?.paymentType;
+        price =
+          paymentType === 2
+            ? formatDecimalsV2((order as any)?.price, 6)
+            : formatDecimalsV2((order as any)?.price);
       } else {
         setIsFirstBid(false);
-        const simpleBidPrice = formatDecimalsV2((lastBid as any)?.price);
-        const otcBidPrice = formatDecimalsV2((lastOtcBid as any)?.price);
-        if ((lastBid as any)?.price && (lastOtcBid as any)?.price) {
-          if ((lastBid as any)?.price?.lt?.((lastOtcBid as any)?.price)) {
-            price = otcBidPrice;
-            // (lastOtcBid as any)?.price;
-          } else {
-            price = simpleBidPrice;
-            // (lastBid as any)?.price;
+        if (activeBidType === bidType.DEFAULT && lastBid) {
+          paymentType = (lastBid as any)?.paymentType;
+
+          if (
+            Number((lastBid as any).expiresAt.toString()) < 3250454400 &&
+            Number((lastBid as any).expiresAt.toString()) >
+              Math.ceil(Number((new Date() as any) / 1000))
+          ) {
+            price =
+              paymentType === 2
+                ? formatDecimalsV2((lastBid as any)?.price, 6)
+                : formatDecimalsV2((lastBid as any)?.price);
+          }
+        } else if (activeBidType === bidType.OTC && lastOtcBid) {
+          paymentType = (lastOtcBid as any)?.paymentType;
+
+          if (
+            Number((lastOtcBid as any).expiresAt.toString()) < 3250454400 &&
+            Number((lastOtcBid as any).expiresAt.toString()) >
+              Math.ceil(Number((new Date() as any) / 1000))
+          ) {
+            price =
+              paymentType === 2
+                ? formatDecimalsV2((lastOtcBid as any)?.price, 6)
+                : formatDecimalsV2((lastOtcBid as any)?.price);
           }
         }
       }
     } else {
       setIsFirstBid(true);
     }
-    // price = formatDecimals(price, 18, true);
 
-    if (price) {
-      if (!isNode) {
-        setBidPrice(price);
-        setLastPrice([price, '0']);
+    setCurrency(paymentType);
+
+    if (price && thorFromAvax && avaxFromThor) {
+      setTempPrice(price);
+      setBidPrice(price);
+      if (paymentType === 0) {
+        const _thor = (
+          Number(price) *
+          Number(
+            ethers.utils.formatEther(thorFromAvax as BigNumberish).toString()
+          )
+        ).toFixed(3);
+        const _usdc = (
+          Number(price) *
+          Number(ethers.utils.formatEther(avaxPrice as BigNumberish).toString())
+        ).toFixed(3);
+        setLastPrice([price, _thor, _usdc]);
+      } else if (paymentType === 1) {
+        const _avax = (
+          Number(price) *
+          Number(
+            ethers.utils.formatEther(avaxFromThor as BigNumberish).toString()
+          )
+        ).toFixed(3);
+        const _usdc = (
+          Number(price) *
+          Number(ethers.utils.formatEther(thorPrice as BigNumberish).toString())
+        ).toFixed(3);
+        setLastPrice([_avax, price, _usdc]);
       } else {
-        setTempPrice(price);
-        setBidPrice(price);
-        // setLastPrice([price]);
+        const _avax = (
+          Number(price) *
+          Number(ethers.utils.formatEther(avaxPrice as BigNumberish).toString())
+        ).toFixed(3);
+        const _thor = (
+          Number(price) *
+          Number(ethers.utils.formatEther(thorPrice as BigNumberish).toString())
+        ).toFixed(3);
+        setLastPrice([_avax, _thor, price]);
       }
     }
-  }, [order, lastBid, lastOtcBid, isNode]);
+  }, [
+    order,
+    lastBid,
+    lastOtcBid,
+    avaxFromThor,
+    thorFromAvax,
+    activeBidType,
+    avaxPrice,
+    thorPrice,
+  ]);
 
   React.useEffect(() => {
     setTempPrice(bidPrice);
   }, [bidPrice]);
-
-  const { data: avaxFromThor } = useGetAvaxFromThor(
-    tempPrice ? tempPrice : '0',
-    chain
-  );
-
-  const { data: thorFromAvax } = useGetThorFromAvax(
-    tempPrice ? tempPrice : '0',
-    chain
-  );
-
-  React.useEffect(() => {
-    if (order) {
-      const paymentType: number = (order as any).paymentType;
-      setCurrency(paymentType);
-    }
-  }, [order]);
-
-  const { data: thorPrice } = useGetUsdFromThor('1', chain);
-  const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
 
   const usdPrice = React.useMemo(() => {
     if (tempPrice) {
@@ -255,9 +282,11 @@ const PlaceBid = (props: Props) => {
           ? avaxPrice
             ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
             : 0
-          : thorPrice
-          ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-          : 0)
+          : currency === 1
+          ? thorPrice
+            ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
+            : 0
+          : 1)
       );
     } else {
       return 0;
@@ -265,75 +294,32 @@ const PlaceBid = (props: Props) => {
   }, [tempPrice, currency, avaxPrice, thorPrice]);
 
   const usdBalancePrice = React.useMemo(() => {
-    if (balance || thorBalance) {
+    if (balance || thorBalance || usdcBalance) {
       const tempTotalPrice =
-        currency === 0 ? formatDecimals(balance) : formatDecimals(thorBalance);
+        currency === 0
+          ? formatDecimals(balance)
+          : currency === 1
+          ? formatDecimals(thorBalance)
+          : formatDecimals(usdcBalance, 6);
       return (
         Number(tempTotalPrice) *
         (currency === 0
           ? avaxPrice
             ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
             : 0
-          : thorPrice
-          ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-          : 0)
+          : currency === 1
+          ? thorPrice
+            ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
+            : 0
+          : 1)
       );
     } else {
       return 0;
     }
-  }, [balance, thorBalance, currency, avaxPrice, thorPrice]);
+  }, [balance, thorBalance, usdcBalance, currency, avaxPrice, thorPrice]);
 
-  console.log(
-    '============>',
-    tempPrice,
-    Number(formatDecimals(balance)),
-    usdPrice,
-    usdBalancePrice
-  );
-
-  React.useEffect(() => {
-    if (order) {
-      if (!isLastPrice) {
-        const _lastPrice = ['0', '0'];
-        if (currency === 0) {
-          if (thorFromAvax) {
-            _lastPrice[0] = tempPrice;
-            _lastPrice[1] = Number(
-              ethers.utils.formatEther(
-                (thorFromAvax as BigNumberish).toString()
-              )
-            ).toFixed(3);
-          }
-        } else {
-          if (avaxFromThor) {
-            _lastPrice[1] = tempPrice;
-            _lastPrice[0] = Number(
-              ethers.utils.formatEther(
-                (avaxFromThor as BigNumberish).toString()
-              )
-            ).toFixed(3);
-          }
-        }
-        if (thorFromAvax && avaxFromThor) {
-          setLastPrice(_lastPrice);
-          setIsLastPrice(true);
-        }
-      }
-    }
-  }, [
-    avaxFromThor,
-    thorFromAvax,
-    currency,
-    order,
-    lastPrice,
-    tempPrice,
-    isLastPrice,
-  ]);
-
-  const handleSelectCurrency: React.ChangeEventHandler<HTMLSelectElement> = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setCurrency(Number(event.target.value));
+  const handleSelectCurrency = (value: number) => {
+    setCurrency(value);
   };
   const bidPriceError = React.useMemo(() => {
     if (Number.isNaN(Number(bidPrice))) {
@@ -350,18 +336,39 @@ const PlaceBid = (props: Props) => {
           message: `Bid price must be non zero`,
         };
       }
+    } else {
+      if (lastPrice) {
+        if (Number(bidPrice) <= Number(lastPrice[currency])) {
+          return {
+            isError: true,
+            message: `Bid price must be greater than ${Number(
+              lastPrice[currency]
+            )} ${
+              currencies.filter((_currency) => _currency.value === currency)[0]
+                .text
+            }`,
+          };
+        }
+      }
     }
     const balanceVal = formatDecimals(balance);
     const thorBalanceVal = formatDecimals(thorBalance);
-    if (balanceVal || thorBalanceVal) {
-      if (!currency) {
+    const usdcBalanceVal = formatDecimals(usdcBalance, 6);
+    if (balanceVal || thorBalanceVal || usdcBalanceVal) {
+      if (currency === 0) {
         if (Number(balanceVal) < Number(bidPrice))
           return {
             isError: true,
             message: `Insufficient funds in your wallet`,
           };
-      } else {
+      } else if (currency === 1) {
         if (Number(thorBalanceVal) < Number(bidPrice))
+          return {
+            isError: true,
+            message: `Insufficient funds in your wallet`,
+          };
+      } else if (currency === 2) {
+        if (Number(usdcBalanceVal) < Number(bidPrice))
           return {
             isError: true,
             message: `Insufficient funds in your wallet`,
@@ -369,15 +376,19 @@ const PlaceBid = (props: Props) => {
       }
     }
     return { isError: false, message: '' };
-  }, [bidPrice, isFirstBid, currency, balance, thorBalance]);
-
-  // const expirationMessage = React.useMemo(() => {
-  //   const newDate = dayjs().add(daysToExpire, 'day');
-  //   return `(Expiration at ${newDate.format('MMM DD, YYYY, h:mm A')})`;
-  // }, [daysToExpire]);
+  }, [
+    bidPrice,
+    isFirstBid,
+    currency,
+    currencies,
+    balance,
+    thorBalance,
+    usdcBalance,
+    lastPrice,
+  ]);
 
   const handleClick = async () => {
-    if (isNode && !approved && currency === 1) {
+    if (!approved && currency === 1) {
       approveThor({
         recklesslySetUnpreparedArgs: [
           marketplaceAddress,
@@ -388,22 +399,32 @@ const PlaceBid = (props: Props) => {
       });
       return;
     }
+
+    if (!approved && currency === 2) {
+      approveUsdc({
+        recklesslySetUnpreparedArgs: [
+          marketplaceAddress,
+          ethers.utils.parseUnits(bidPrice, 6),
+        ],
+      });
+      return;
+    }
+
     if (activeBidType === bidType.DEFAULT) {
       writePlaceBid({
         recklesslySetUnpreparedArgs: [
           collectionAddress,
           tokenId,
-          ethers.utils.parseEther(bidPrice.toString()),
+          currency === 2
+            ? ethers.utils.parseUnits(bidPrice.toString(), 6)
+            : ethers.utils.parseEther(bidPrice.toString()),
           expiryTimestamp,
           currency,
         ],
         recklesslySetUnpreparedOverrides: {
           from: accountAddress,
-          value: isNode
-            ? currency === 0
-              ? ethers.utils.parseEther(bidPrice.toString())
-              : 0
-            : ethers.utils.parseEther(bidPrice.toString()),
+          value:
+            currency === 0 ? ethers.utils.parseEther(bidPrice.toString()) : 0,
         },
       });
     } else if (activeBidType === bidType.OTC) {
@@ -412,16 +433,15 @@ const PlaceBid = (props: Props) => {
           currency,
           collectionAddress,
           tokenId,
-          ethers.utils.parseEther(bidPrice.toString()),
+          currency === 2
+            ? ethers.utils.parseUnits(bidPrice.toString(), 6)
+            : ethers.utils.parseEther(bidPrice.toString()),
           expiryTimestamp,
         ],
         recklesslySetUnpreparedOverrides: {
           from: accountAddress,
-          value: isNode
-            ? currency === 0
-              ? ethers.utils.parseEther(bidPrice.toString())
-              : 0
-            : ethers.utils.parseEther(bidPrice.toString()),
+          value:
+            currency === 0 ? ethers.utils.parseEther(bidPrice.toString()) : 0,
         },
       });
     }
@@ -433,16 +453,17 @@ const PlaceBid = (props: Props) => {
         confirmBtn: 'Save',
       });
       handleClose();
-
       return;
     }
-    // openToast(isLoading, isSuccess);
     handleClose();
   };
   const closePlaceBidModalRef = useSetAttribute([
     { key: 'id', value: 'nodes-close-modal-button' },
     { key: 'dusk', value: 'nodes-close-modal-button' },
   ]);
+  const theme = useTheme();
+  const matchSmDown = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
     <Box>
       <Dialog
@@ -494,18 +515,24 @@ const PlaceBid = (props: Props) => {
                   position: 'relative',
                 }}
               >
-                <Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
                   <Box
                     sx={{
-                      width: 190,
+                      width: matchSmDown ? '100%' : '190px',
                       height: '26px',
-                      background: palette.primary.fire,
+                      bgcolor: 'primary.main',
                       display: 'flex',
                       justifyContent: 'center',
                       aligItems: 'center',
-                      mb: 1,
+                      mb: matchSmDown ? 1 : 2,
                       paddingTop: 1,
-                      mt: { miniMobile: '49px', sm: '1px' },
+                      // mt: { miniMobile: '49px', sm: '1px' },
                     }}
                   >
                     <Typography
@@ -517,89 +544,68 @@ const PlaceBid = (props: Props) => {
                   </Box>
                   <Box
                     sx={{
-                      height: {
-                        miniMobile: 190,
-                        xs: 190,
-                        sm: 190,
-                        md: 190,
-                        lg: 190,
-                      },
-                      width: {
-                        miniMobile: 190,
-                        xs: 190,
-                        sm: 190,
-                        md: 190,
-                        lg: 190,
-                      },
+                      // height: matchSmDown ? '164px' : '460px',
+                      width: matchSmDown ? 'calc(100vw - 32px)' : '197px',
+                      position: 'relative',
+                      textAlign: matchSmDown ? 'center' : 'unset',
                     }}
                   >
                     <img
                       src={nft?.image ? nft?.image : '/images/nftImage.png'}
                       alt="NFTS"
-                      width="100%"
-                      height="100%"
+                      width={matchSmDown ? '164px' : '197px'}
+                      height="auto"
                     />
+                    <Typography
+                      variant="lbl-md"
+                      sx={{
+                        width: '80%',
+                        display: 'block',
+                        position: 'absolute',
+                        color: 'white',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        bottom: '15px',
+                        left: '15px',
+                        right: 0,
+                        marginTop: 1,
+                      }}
+                    >
+                      {nft?.title ?? ''}
+                    </Typography>
                   </Box>
-                </Box>
-                <Box
-                  sx={{
-                    ml: {
-                      miniMobile: 2,
-                      xs: 2,
-                      sm: 4,
-                      md: 0,
-                      lg: 0,
-                    },
-                    position: 'absolute',
-                    bottom: '20px',
-                    left: '16px',
-                  }}
-                >
-                  <Typography
-                    variant="p-lg"
-                    sx={{
-                      width: {
-                        miniMobile: '100%',
-                        xs: '169px',
-                        sm: '169px',
-                        md: '169px',
-                      },
-                      display: 'block',
-                      aligItems: 'center',
-                      marginTop: 1,
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-
-                      fontWeight: '700',
-                      fontFamily: 'Nexa',
-                      fontSize: '14px',
-                      fontStyle: 'normal',
-                      lineHeight: '15px',
-                    }}
-                  >
-                    {nft?.title ?? ''}
-                  </Typography>
                 </Box>
               </Box>
             </Grid>
-            <Grid item md={7.5} miniMobile={12} sm={10} xs={12}>
+            <Grid
+              item
+              md={7.5}
+              miniMobile={12}
+              sm={10}
+              xs={12}
+              sx={{ marginTop: matchSmDown ? '-8px' : 'auto' }}
+            >
               <Box
                 sx={{
                   height: '562px',
-                  background: '#FAFAFA',
+                  bgcolor: 'background.paper',
                   boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.24)',
                   p: 3,
                   position: 'relative',
                 }}
               >
-                <Box
+                <IconButton
                   ref={closePlaceBidModalRef}
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
                   onClick={handleClose}
+                  size={'small'}
+                  sx={{
+                    position: 'absolute',
+                    right: 20,
+                  }}
                 >
-                  <Image src="/images/cross.svg" width={16} height={16} />
-                </Box>
+                  <Close />
+                </IconButton>
                 <Box>
                   <Typography
                     variant="sub-h"
@@ -614,15 +620,15 @@ const PlaceBid = (props: Props) => {
                     Place a bid
                   </Typography>
                   <Box
-                    sx={{
+                    sx={(theme) => ({
                       display: { miniMobile: 'content', sm: 'block' },
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       mb: 3.8,
                       mt: 3,
                       p: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.3)',
-                    }}
+                      border: `1px solid ${theme.palette.divider}`,
+                    })}
                   >
                     <Box
                       sx={{ display: 'flex', justifyContent: 'space-between' }}
@@ -683,7 +689,9 @@ const PlaceBid = (props: Props) => {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         mt: 0.8,
-                        color: !bidPriceError?.isError ? 'black' : '#D90368',
+                        color: !bidPriceError?.isError
+                          ? 'text.secondary'
+                          : 'error.main',
                       }}
                     >
                       <Typography variant="p-md-bk">
@@ -691,12 +699,13 @@ const PlaceBid = (props: Props) => {
                       </Typography>
                       <Box>
                         <Typography variant="p-md-bk">
-                          {isNode
-                            ? currency === 0
-                              ? (balance && formatDecimals(balance)) + ' AVAX'
-                              : (thorBalance && formatDecimals(thorBalance)) +
-                                ' THOR'
-                            : (balance && formatDecimals(balance)) + ' AVAX'}
+                          {currency === 0
+                            ? (balance && formatDecimals(balance)) + ' AVAX'
+                            : currency === 1
+                            ? (thorBalance && formatDecimals(thorBalance)) +
+                              ' THOR'
+                            : (usdcBalance && formatDecimals(usdcBalance, 6)) +
+                              ' USDC.e'}
                         </Typography>
                         <Typography
                           sx={{ fontSize: '12px', textAlign: 'right' }}
@@ -715,7 +724,6 @@ const PlaceBid = (props: Props) => {
                         inputProps={{
                           sx: {
                             fontSize: '18px',
-                            color: 'rgba(0, 0, 0, 0.24)',
                             with: '100%',
                           },
                         }}
@@ -741,36 +749,11 @@ const PlaceBid = (props: Props) => {
                       />
                     </Box>
 
-                    <Box
-                      sx={{
-                        'display': 'flex',
-                        // position: 'absolute',
-                        'alignItems': 'center',
-                        'top': '15px',
-                        'left': '70%',
-                        'borderBottom': '1px solid rgba(0, 0, 0)',
-                        'borderRight': '1px solid rgba(0, 0, 0)',
-                        '&:hover': {
-                          borderBottom: '2px solid rgba(0, 0, 0)',
-                          borderRight: '2px solid rgba(0, 0, 0)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ m: '0px 12px 0px 8px' }}>
-                        <Image
-                          src={`/images/${
-                            currency === 0 ? 'avax' : 'thor'
-                          }Icon.svg`}
-                          height={14}
-                          width={14}
-                          objectFit="contain"
-                        />
-                      </Box>
-                      <SelectBox
-                        onChange={handleSelectCurrency}
-                        defaultValue={currency}
-                        options={currencies}
+                    <Box mt={'13px'}>
+                      <CurrencySelect
+                        currencies={currencies}
                         value={currency}
+                        onChange={handleSelectCurrency}
                       />
                     </Box>
                   </Box>
@@ -779,28 +762,26 @@ const PlaceBid = (props: Props) => {
                     <Typography
                       sx={{
                         fontSize: '12px',
-                        color: 'rgba(0, 0, 0, 0.24)',
+                        color: 'text.secondary',
                       }}
                     >
-                      {isNode
-                        ? bidPriceError.isError
-                          ? ' '
-                          : `${usdPrice.toFixed(3)} USD`
-                        : ''}
+                      {bidPriceError.isError
+                        ? ' '
+                        : `${usdPrice.toFixed(3)} USD`}
                     </Typography>
                   </Box>
                   {/* === */}
                   <Box sx={{ minWidth: 120 }}>
                     <FormControl
                       fullWidth
-                      sx={{
-                        'borderBottom': '1px solid rgba(0, 0, 0)',
-                        'borderRight': '1px solid rgba(0, 0, 0)',
+                      sx={(theme) => ({
+                        'borderBottom': `1px solid ${theme.palette.divider}`,
+                        'borderRight': `1px solid ${theme.palette.divider}`,
                         '&:hover': {
-                          borderBottom: '2px solid rgba(0, 0, 0)',
-                          borderRight: '2px solid rgba(0, 0, 0)',
+                          borderBottom: `2px solid ${theme.palette.divider}`,
+                          borderRight: `2px solid ${theme.palette.divider}`,
                         },
-                      }}
+                      })}
                     >
                       <InputLabel
                         variant="standard"
@@ -830,11 +811,7 @@ const PlaceBid = (props: Props) => {
                             marginTop: '31px',
                           }}
                         >
-                          <Image
-                            src={'/images/timeIcon.svg'}
-                            height={20}
-                            width={20}
-                          />
+                          <TimerSharp sx={{ color: 'text.secondary' }} />
                         </Box>
                         <Box sx={{ width: '90%' }}>
                           <NativeSelect
@@ -869,20 +846,7 @@ const PlaceBid = (props: Props) => {
                       </Box>
                     </FormControl>
                   </Box>
-                  {/* <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 3,
-                    }}
-                  ></Box> */}
 
-                  {/* ======================== */}
-
-                  {/* <Divider
-                    sx={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', mb: 1.5 }}
-                  /> */}
                   <Box>
                     <Box
                       sx={{
@@ -895,7 +859,9 @@ const PlaceBid = (props: Props) => {
                       <Typography
                         variant="p-md-bk"
                         sx={{
-                          color: !bidPriceError?.isError ? 'black' : '#D90368',
+                          color: !bidPriceError?.isError
+                            ? 'text.primary'
+                            : 'error.main',
                         }}
                       >
                         You will pay
@@ -906,8 +872,13 @@ const PlaceBid = (props: Props) => {
                           fontWeight: 700,
                         }}
                       >
-                        {bidPrice}{' '}
-                        {isNode ? currencies[currency].label : 'AVAX'}
+                        {`${bidPrice} ${
+                          currency === 0
+                            ? 'AVAX'
+                            : currency === 1
+                            ? 'THOR'
+                            : 'USDC.e'
+                        }`}
                       </Typography>
                     </Box>
                     <Box
@@ -926,13 +897,11 @@ const PlaceBid = (props: Props) => {
                       </Box>
                       <Typography
                         variant="p-md-bk"
-                        sx={{ fontSize: '12px', mt: 0.4, color: '#D90368' }}
+                        sx={{ fontSize: '12px', mt: 0.4, color: 'error.main' }}
                       >
                         {bidPriceError?.message}
                       </Typography>
                     </Box>
-
-                    {/* bidPriceError.isError */}
                   </Box>
                   <Box sx={{ display: 'flex', mt: 5, width: '100%' }}>
                     <Button
@@ -943,32 +912,23 @@ const PlaceBid = (props: Props) => {
                         bidPriceError.isError ||
                         getApprovalLoading ||
                         approveThorLoading ||
-                        (isNode &&
-                          currency === 0 &&
+                        getUsdcTokenApprovalLoading ||
+                        approveUsdcLoading ||
+                        (currency === 0 &&
                           Number(formatDecimals(balance)) < Number(bidPrice)) ||
-                        (isNode &&
-                          currency === 1 &&
+                        (currency === 1 &&
                           Number(formatDecimals(thorBalance)) <
                             Number(bidPrice)) ||
-                        (!isNode &&
-                          Number(formatDecimals(balance)) < Number(bidPrice))
+                        (currency === 2 &&
+                          Number(formatDecimals(usdcBalance, 6)) <
+                            Number(bidPrice))
                       }
                       variant="contained"
+                      fullWidth
                       onClick={handleClick}
-                      sx={{
-                        'borderRadius': '0%',
-                        'width': '100%',
-                        'maxWidth': '100%',
-                        'background': 'black',
-                        '&:hover': { backgroundColor: 'black' },
-                      }}
                     >
                       <Typography variant="p-md">
-                        {isNode
-                          ? approved
-                            ? 'Place a Bid'
-                            : 'Approval Request'
-                          : 'Place Bid'}
+                        {approved ? 'Place a Bid' : 'Approval Request'}
                       </Typography>
                     </Button>
                   </Box>

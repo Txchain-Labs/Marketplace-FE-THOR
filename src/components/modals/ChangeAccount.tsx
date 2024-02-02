@@ -33,6 +33,7 @@ const ChangeAccount = (props: Props) => {
             <Button
               onClick={close}
               variant="contained"
+              fullWidth
               sx={{ textTransform: 'capitalize' }}
             >
               Cancel
@@ -40,6 +41,7 @@ const ChangeAccount = (props: Props) => {
             <Button
               onClick={login}
               variant="contained"
+              fullWidth
               sx={{ textTransform: 'capitalize' }}
             >
               Accept and Signin

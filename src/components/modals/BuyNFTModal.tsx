@@ -10,10 +10,10 @@ import {
   TextField,
   Typography,
   Dialog,
+  IconButton,
 } from '@mui/material';
 
 import { MODAL_TYPES, useGlobalModalContext } from './GlobleModal';
-import { palette } from '../../theme/palette';
 
 import { dottedAddress, formatDecimals } from '../../shared/utils/utils';
 import {
@@ -26,6 +26,8 @@ import {
   useSetApprovalThor,
   useBalance,
   useGetApprovalThor,
+  useGetApprovalUSDCE,
+  useSetApprovalUSDCE,
 } from '../../hooks/useToken';
 import {
   useGetOrderByNft,
@@ -42,22 +44,35 @@ import {
 } from '../../hooks/useOracle';
 import { ToastSeverity } from '../../redux/slices/toastSlice';
 
-import SelectBox from '../common/SelectBox';
+import CloseIcon from '@mui/icons-material/Close';
+import CurrencySelect from '@/components/common/CurrencySelect';
+import { Listing } from '@/models/Listing';
+import { toAvax, toThor, toUsd } from '@/utils/helper';
 
 type Props = {
   open: boolean;
   handleClose?: any;
-  openToast?: any;
   collectionAddress?: string | undefined;
   refresh?: any;
+  acceptPayments?: any[];
   tokenId?: number | undefined;
   nft?: { image: string | undefined; title: string | undefined } | undefined;
+  listing: Listing;
 };
 
 const BuyNFTModal = (props: Props) => {
   const { showModal } = useGlobalModalContext();
 
-  const { open, handleClose, collectionAddress, tokenId, nft, refresh } = props;
+  const {
+    open,
+    handleClose,
+    collectionAddress,
+    tokenId,
+    nft,
+    listing,
+    refresh,
+    acceptPayments,
+  } = props;
 
   const user = useSelector((state: any) => state.auth.user);
 
@@ -69,18 +84,20 @@ const BuyNFTModal = (props: Props) => {
 
   const { data: order }: any = useGetOrderByNft(collectionAddress, tokenId);
   const isNode = isNodeNFT(collectionAddress ? collectionAddress : '', chain);
-  const currencies = getValidCurrency(isNode);
-  const [currency, setCurrency] = useState(currencies[0].value);
-
-  console.log([currencies]);
 
   const balance = useBalance('AVAX');
   const thorBalance = useBalance('THOR');
+  const usdcBalance = useBalance('USDCE');
 
   const { data: usdFromThor } = useGetUsdFromThor('1', chain);
   const { data: usdFromAvax } = useGetUsdFromAvax('1', chain);
   const { data: avaxFromThor } = useGetAvaxFromThor('1', chain);
   const { data: thorFromAvax } = useGetThorFromAvax('1', chain);
+
+  const currencies = getValidCurrency(isNode, acceptPayments);
+  const [currency, setCurrency] = useState(currencies[0].value);
+  const [priceByCurrency, setPriceByCurrency] = useState(['0', '0', '0']);
+
   const nftImage = nft?.image;
 
   const {
@@ -93,6 +110,17 @@ const BuyNFTModal = (props: Props) => {
     isLoading: approveThorLoading,
     isSuccess: setApprovalSuccess,
   } = useSetApprovalThor();
+
+  const {
+    data: usdcTokenApproval,
+    refetch: refetchGetUsdcTokenApproval,
+    isLoading: getUsdcTokenApprovalLoading,
+  } = useGetApprovalUSDCE(accountAddress);
+  const {
+    write: approveUsdc,
+    isLoading: approveUsdcLoading,
+    isSuccess: setUsdcApprovalSuccess,
+  } = useSetApprovalUSDCE();
 
   const buyNFTToast = {
     message: 'Processing transaction',
@@ -119,97 +147,108 @@ const BuyNFTModal = (props: Props) => {
 
   useGetTransaction(executeData?.hash, txnToast);
 
-  // [AVAX, THOR, USDCE]
-  const priceByTokens = useMemo(() => {
-    if (!order || !avaxFromThor || !thorFromAvax)
-      return [BigNumber.from(0), BigNumber.from(0), BigNumber.from(0)];
-
-    const { price } = order;
-
-    const changedPriceByTokens = [];
-
-    // Listed by AVAX
-    if (Number((order as any).paymentType) === 0) {
-      changedPriceByTokens[0] = BigNumber.from(price);
-      changedPriceByTokens[1] = BigNumber.from(price)
-        .mul(thorFromAvax as BigNumberish)
-        .div('1000000000000000000');
-      changedPriceByTokens[2] = BigNumber.from(price)
-        .mul(usdFromAvax as BigNumberish)
-        .div('1000000000000000000');
-    }
-    // Listed by THOR
-    else {
-      changedPriceByTokens[0] = BigNumber.from(price)
-        .mul(avaxFromThor as BigNumberish)
-        .div('1000000000000000000');
-      changedPriceByTokens[1] = BigNumber.from(price);
-      changedPriceByTokens[2] = BigNumber.from(price)
-        .mul(usdFromThor as BigNumberish)
-        .div('1000000000000000000');
-    }
-
-    return changedPriceByTokens;
-  }, [order, avaxFromThor, thorFromAvax, usdFromThor, usdFromAvax]);
-
   const isInsufficientBalance = useMemo(() => {
     return (
-      (isNode &&
-        currency === 0 &&
+      (currency === 0 &&
         balance &&
         Number(formatDecimals(balance)) <
-          Number(ethers.utils.formatEther(priceByTokens[currency] || 0))) ||
-      (isNode &&
-        currency !== 0 &&
+          Number(
+            ethers.utils.formatEther(
+              (priceByCurrency && priceByCurrency[currency]) || 0
+            )
+          )) ||
+      (currency === 1 &&
         thorBalance &&
         Number(formatDecimals(thorBalance)) <
-          Number(ethers.utils.formatEther(priceByTokens[currency] || 0))) ||
-      (!isNode &&
-        balance &&
-        Number(formatDecimals(balance)) <
-          Number(ethers.utils.formatEther(priceByTokens[currency] || 0)))
+          Number(
+            ethers.utils.formatEther(
+              (priceByCurrency && priceByCurrency[currency]) || 0
+            )
+          )) ||
+      (currency === 2 &&
+        usdcBalance &&
+        Number(formatDecimals(usdcBalance, 6)) <
+          Number(
+            ethers.utils.formatEther(
+              (priceByCurrency && priceByCurrency[currency]) || 0
+            )
+          ))
     );
-  }, [balance, thorBalance, currency, isNode, priceByTokens]);
+  }, [balance, thorBalance, usdcBalance, currency, priceByCurrency]);
 
   const usdBalancePrice = React.useMemo(() => {
-    if (balance || thorBalance) {
+    if (balance || thorBalance || usdcBalance) {
       const tempTotalPrice =
-        currency === 0 ? formatDecimals(balance) : formatDecimals(thorBalance);
+        currency === 0
+          ? formatDecimals(balance)
+          : currency === 1
+          ? formatDecimals(thorBalance)
+          : formatDecimals(usdcBalance, 6);
       return (
         Number(tempTotalPrice) *
         (currency === 0
           ? usdFromAvax
             ? Number(ethers.utils.formatEther(usdFromAvax as BigNumberish))
             : 0
-          : usdFromThor
-          ? Number(ethers.utils.formatEther(usdFromThor as BigNumberish))
+          : currency === 1
+          ? usdFromThor
+            ? Number(ethers.utils.formatEther(usdFromThor as BigNumberish))
+            : 0
+          : currency === 2
+          ? 1
           : 0)
       );
     } else {
       return 0;
     }
-  }, [balance, thorBalance, currency, usdFromAvax, usdFromThor]);
+  }, [balance, thorBalance, currency, usdFromAvax, usdcBalance, usdFromThor]);
+
+  const usdBuyPrice = React.useMemo(() => {
+    if (priceByCurrency) {
+      return priceByCurrency[2];
+    } else {
+      return '0';
+    }
+  }, [priceByCurrency]);
   // Refetch approval amount when approval success
   useEffect(() => {
     refetchGetApproval();
   }, [setApprovalSuccess, refetchGetApproval]);
 
+  useEffect(() => {
+    refetchGetUsdcTokenApproval();
+  }, [setUsdcApprovalSuccess, refetchGetUsdcTokenApproval]);
+
   // Set approved state
   useEffect(() => {
-    if (tokenApproval && currency === 1) {
-      setApproved(priceByTokens[currency].lte(tokenApproval as BigNumberish));
-    } else {
-      setApproved(false);
-    }
     if (currency === 0) {
       setApproved(true);
+      return;
+    }
+    if (tokenApproval && currency === 1 && priceByCurrency) {
+      setApproved(
+        BigNumber.from(priceByCurrency[currency]).lte(
+          tokenApproval as BigNumberish
+        )
+      );
+    } else if (usdcTokenApproval && currency === 2 && priceByCurrency) {
+      setApproved(
+        BigNumber.from(priceByCurrency[currency]).lte(
+          usdcTokenApproval as BigNumberish
+        )
+      );
+    } else {
+      setApproved(false);
     }
   }, [
     currency,
     tokenApproval,
+    usdcTokenApproval,
     setApprovalSuccess,
+    setUsdcApprovalSuccess,
     approveThorLoading,
-    priceByTokens,
+    approveUsdcLoading,
+    priceByCurrency,
   ]);
 
   useEffect(() => {
@@ -225,14 +264,57 @@ const BuyNFTModal = (props: Props) => {
     setCurrency(Number((order as any).paymentType));
   }, [order]);
 
-  const handleSelectCurrency: React.ChangeEventHandler<HTMLSelectElement> = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setCurrency(Number(event.target.value));
+  useEffect(() => {
+    if (
+      !acceptPayments ||
+      !listing ||
+      !thorFromAvax ||
+      !usdFromAvax ||
+      !usdFromThor ||
+      !avaxFromThor
+    ) {
+      return;
+    }
+
+    const nftAvaxPrice = toAvax(
+        listing.priceInWei,
+        listing.paymentType,
+        avaxFromThor,
+        usdFromAvax
+      ),
+      nftThorPrice = toThor(
+        listing.priceInWei,
+        listing.paymentType,
+        thorFromAvax,
+        usdFromThor
+      ),
+      nftUsdPrice = toUsd(
+        listing.priceInWei,
+        listing.paymentType,
+        usdFromAvax,
+        usdFromThor
+      );
+
+    setPriceByCurrency([
+      nftAvaxPrice.toString(),
+      nftThorPrice.toString(),
+      nftUsdPrice.toString(),
+    ]);
+  }, [
+    thorFromAvax,
+    usdFromAvax,
+    usdFromThor,
+    avaxFromThor,
+    acceptPayments,
+    listing,
+  ]);
+
+  const handleSelectCurrency = (value: number) => {
+    setCurrency(value);
   };
 
   const handleBuyOrApproval = async () => {
-    if (!user?.address) {
+    if (!user?.address && !priceByCurrency) {
       showModal(MODAL_TYPES.CONNECT_WALLET, {
         title: 'Create instance form',
         confirmBtn: 'Save',
@@ -241,40 +323,41 @@ const BuyNFTModal = (props: Props) => {
       return;
     }
 
-    if (priceByTokens.length < 2) return;
-
-    // Approve when purchase by THOR
-    if (isNode && !approved && currency === 1) {
+    // Approve when purchase by THOR or USDC.e
+    if (!approved && currency === 1 && priceByCurrency) {
       approveThor({
         recklesslySetUnpreparedArgs: [
           marketplaceAddress,
-          priceByTokens[currency],
+          priceByCurrency[currency],
+        ],
+      });
+    } else if (!approved && currency === 2 && priceByCurrency) {
+      approveUsdc({
+        recklesslySetUnpreparedArgs: [
+          marketplaceAddress,
+          BigNumber.from(priceByCurrency[currency]),
         ],
       });
     }
-    // Purchase by AVAX
+    // Purchase
     else {
       write({
         recklesslySetUnpreparedArgs: [
           [collectionAddress],
           [tokenId],
-          [priceByTokens[currency]],
+          [BigNumber.from(priceByCurrency[currency])],
           currency,
         ],
         recklesslySetUnpreparedOverrides: {
           from: user?.address,
-          value: currency === 0 ? priceByTokens[currency] : BigNumber.from(0),
+          value:
+            currency === 0
+              ? BigNumber.from(priceByCurrency[currency])
+              : BigNumber.from(0),
         },
       });
     }
   };
-
-  useEffect(() => {
-    const html = document.querySelector('html');
-    if (html) {
-      html.style.overflow = open ? 'hidden' : 'auto';
-    }
-  }, [open]);
 
   return (
     <Box>
@@ -288,6 +371,7 @@ const BuyNFTModal = (props: Props) => {
         maxWidth="sm"
         sx={{
           // 'zIndex': 10006,
+          'overflow': { miniMobile: 'scroll', md: 'hidden' },
           '& .MuiDialog-paper': {
             maxWidth: '770px !important',
             background: 'transparent !important',
@@ -331,7 +415,7 @@ const BuyNFTModal = (props: Props) => {
                     sx={{
                       width: 190,
                       height: '26px',
-                      background: palette.primary.fire,
+                      bgcolor: 'primary.main',
                       display: 'flex',
                       justifyContent: 'center',
                       aligItems: 'center',
@@ -403,8 +487,7 @@ const BuyNFTModal = (props: Props) => {
                       whiteSpace: 'nowrap',
                       textOverflow: 'ellipsis',
 
-                      fontWeight: '700',
-                      fontFamily: 'Nexa',
+                      fontFamily: 'Nexa-Bold',
                       fontSize: '14px',
                       fontStyle: 'normal',
                       lineHeight: '15px',
@@ -428,19 +511,24 @@ const BuyNFTModal = (props: Props) => {
             </Grid>
             <Grid item md={7.5} miniMobile={12} sm={10} xs={12}>
               <Box
-                sx={{
+                sx={(theme) => ({
                   // height: '590px',
-                  background: '#FAFAFA',
-                  boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.24)',
+                  bgcolor: 'background.paper',
+                  boxShadow: theme.shadows[1],
                   p: 3,
                   position: 'relative',
-                }}
+                })}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
-                  onClick={handleClose}
+                  sx={{
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                  }}
                 >
-                  <Image src="/images/cross.svg" width={16} height={16} />
+                  <IconButton aria-label="close" onClick={handleClose}>
+                    <CloseIcon />
+                  </IconButton>
                 </Box>
                 <Box>
                   <Typography
@@ -452,19 +540,19 @@ const BuyNFTModal = (props: Props) => {
                       letterSpacing: '0.04em',
                     }}
                   >
-                    Buy a node
+                    Buy Asset
                   </Typography>
                   {/* ============= */}
                   <Box
-                    sx={{
+                    sx={(theme) => ({
                       display: { miniMobile: 'content', sm: 'block' },
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       mb: 3.8,
                       mt: 3,
                       p: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.3)',
-                    }}
+                      border: `1px solid ${theme.palette.divider}`,
+                    })}
                   >
                     <Box
                       sx={{ display: 'flex', justifyContent: 'space-between' }}
@@ -506,7 +594,7 @@ const BuyNFTModal = (props: Props) => {
                       >
                         <Typography
                           sx={{
-                            color: 'rgba(29, 185, 84, 1)',
+                            color: 'success.main',
                             mr: 1,
                             fontSize: '14px',
                             fontWeight: 700,
@@ -532,18 +620,22 @@ const BuyNFTModal = (props: Props) => {
                       </Typography>
                       <Box>
                         <Typography variant="p-md-bk">
-                          {isNode
-                            ? currency === 0
-                              ? (balance &&
-                                  Number(formatDecimals(balance)).toFixed(3)) +
-                                ' AVAX'
-                              : (thorBalance &&
-                                  Number(formatDecimals(thorBalance)).toFixed(
-                                    3
-                                  )) + ' THOR'
-                            : (balance &&
-                                Number(formatDecimals(balance)).toFixed(3)) +
-                              ' AVAX'}
+                          {currency === 0 ? (
+                            (balance &&
+                              Number(formatDecimals(balance)).toFixed(3)) +
+                            ' AVAX'
+                          ) : currency === 1 ? (
+                            (thorBalance &&
+                              Number(formatDecimals(thorBalance)).toFixed(3)) +
+                            ' THOR'
+                          ) : currency === 2 ? (
+                            (usdcBalance &&
+                              Number(formatDecimals(usdcBalance, 6)).toFixed(
+                                3
+                              )) + ' USDC.e'
+                          ) : (
+                            <></>
+                          )}
                         </Typography>
                         <Typography
                           sx={{ fontSize: '12px', textAlign: 'right' }}
@@ -561,7 +653,7 @@ const BuyNFTModal = (props: Props) => {
                         inputProps={{
                           sx: {
                             fontSize: '18px',
-                            color: 'rgba(0, 0, 0, 0.24)',
+                            color: 'text.secondary',
                             with: '100%',
                           },
                         }}
@@ -569,7 +661,14 @@ const BuyNFTModal = (props: Props) => {
                         fullWidth
                         name="price"
                         value={Number(
-                          ethers.utils.formatEther(priceByTokens[currency] || 0)
+                          currency === 2
+                            ? ethers.utils.formatUnits(
+                                priceByCurrency[currency] || 0,
+                                6
+                              )
+                            : ethers.utils.formatEther(
+                                priceByCurrency[currency] || 0
+                              )
                         )?.toFixed(3)}
                         type="number"
                         // onChange={handleChangePrice}
@@ -579,7 +678,11 @@ const BuyNFTModal = (props: Props) => {
                         id="price"
                         label={
                           <Typography
-                            sx={{ fontSize: '22px', fontFamily: 'Nexa-Bold' }}
+                            sx={{
+                              fontSize: '22px',
+                              fontFamily: 'Nexa-Bold',
+                              color: 'text.primary',
+                            }}
                             variant="p-md"
                           >
                             Your bid
@@ -589,36 +692,11 @@ const BuyNFTModal = (props: Props) => {
                       />
                     </Box>
 
-                    <Box
-                      sx={{
-                        'display': 'flex',
-                        // position: 'absolute',
-                        'alignItems': 'center',
-                        'top': '15px',
-                        'left': '70%',
-                        'borderBottom': '1px solid rgba(0, 0, 0)',
-                        'borderRight': '1px solid rgba(0, 0, 0)',
-                        '&:hover': {
-                          borderBottom: '2px solid rgba(0, 0, 0)',
-                          borderRight: '2px solid rgba(0, 0, 0)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ m: '0px 12px 0px 8px' }}>
-                        <Image
-                          src={`/images/${
-                            currency === 0 ? 'avax' : 'thor'
-                          }Icon.svg`}
-                          height={14}
-                          width={14}
-                          objectFit="contain"
-                        />
-                      </Box>
-                      <SelectBox
-                        onChange={handleSelectCurrency}
-                        defaultValue={currency}
-                        options={currencies}
+                    <Box mt={'13px'}>
+                      <CurrencySelect
+                        currencies={currencies}
                         value={currency}
+                        onChange={handleSelectCurrency}
                       />
                     </Box>
                   </Box>
@@ -628,14 +706,12 @@ const BuyNFTModal = (props: Props) => {
                     <Typography
                       sx={{
                         fontSize: '12px',
-                        color: 'rgba(0, 0, 0, 0.24)',
+                        color: 'text.secondary',
                       }}
                     >
-                      {isNode
-                        ? `${formatNumber(
-                            ethers.utils.formatEther(priceByTokens[2])
-                          )} USD`
-                        : ''}
+                      {`${formatNumber(
+                        ethers.utils.formatUnits(usdBuyPrice, 6)
+                      )} USD`}
                     </Typography>
                   </Box>
 
@@ -651,10 +727,21 @@ const BuyNFTModal = (props: Props) => {
                     <Typography variant="p-md-bk">
                       {(
                         Number(
-                          ethers.utils.formatEther(priceByTokens[currency] || 0)
+                          currency === 2
+                            ? ethers.utils.formatUnits(
+                                priceByCurrency[currency] || 0,
+                                6
+                              )
+                            : ethers.utils.formatEther(
+                                priceByCurrency[currency] || 0
+                              )
                         ) * 0.0025
                       )?.toFixed(3)}
-                      {!currency ? ' AVAX' : ' THOR'}
+                      {currency === 0
+                        ? ' AVAX '
+                        : currency === 1
+                        ? ' THOR '
+                        : ' USDC.e '}
                       (0.25%)
                     </Typography>
                   </Box>
@@ -678,13 +765,26 @@ const BuyNFTModal = (props: Props) => {
                       }}
                     >
                       {Number(
-                        ethers.utils.formatEther(priceByTokens[currency] || 0)
+                        currency === 2
+                          ? ethers.utils.formatUnits(
+                              priceByCurrency[currency] || 0,
+                              6
+                            )
+                          : ethers.utils.formatEther(
+                              priceByCurrency[currency] || 0
+                            )
                       )?.toFixed(3)}{' '}
-                      {isNode ? currencies[currency].label : 'AVAX'}
+                      {
+                        currencies.filter(
+                          (_currency) => _currency.value === currency
+                        )[0].text
+                      }
                     </Typography>
                   </Box>
                   {isInsufficientBalance && (
-                    <Box sx={{ mt: 5, textAlign: 'center', color: 'red' }}>
+                    <Box
+                      sx={{ mt: 5, textAlign: 'center', color: 'error.main' }}
+                    >
                       <Typography variant="p-md">
                         Insufficient balance
                       </Typography>
@@ -695,24 +795,21 @@ const BuyNFTModal = (props: Props) => {
                       disabled={
                         isInsufficientBalance ||
                         getApprovalLoading ||
+                        getUsdcTokenApprovalLoading ||
                         approveThorLoading ||
+                        approveUsdcLoading ||
                         isExecuteLoading ||
                         transactionLoading
                       }
                       variant="contained"
+                      fullWidth
                       onClick={handleBuyOrApproval}
                       sx={{
                         borderRadius: '0%',
-                        width: '100%',
-                        maxWidth: '100%',
                       }}
                     >
                       <Typography variant="p-md">
-                        {isNode
-                          ? approved
-                            ? 'Buy NFT'
-                            : 'Approval Request'
-                          : 'Buy NFT'}
+                        {approved ? 'Buy NFT' : 'Approval Request'}
                       </Typography>
                     </Button>
                   </Box>

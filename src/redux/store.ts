@@ -12,8 +12,12 @@ import uiGolobalStateReducer from './slices/uiGolobalSlice';
 import dummyDataReducer from './slices/dummyData';
 import transactionReducer from './slices/transactionSlice';
 import nodesReducer from './slices/nodesSlice';
+import nftsReducer from './slices/nftsSlice';
 import toastReducer from './slices/toastSlice';
 import cartReducer from './slices/cartSlice';
+import managerFiltersReducer from './slices/managerFilterSlice';
+import bagListReducer from './slices/bagListSlice';
+import managerBagReducers from './slices/managerBagSlice';
 
 /**
  * Creates a store and includes all the slices as reducers.
@@ -27,8 +31,12 @@ const reducer = combineReducers({
   dummy: dummyDataReducer,
   txn: transactionReducer,
   nodes: nodesReducer,
+  nfts: nftsReducer,
   toast: toastReducer,
   cart: cartReducer,
+  managerFilter: managerFiltersReducer,
+  managerBags: managerBagReducers,
+  bagList: bagListReducer,
 });
 
 const persistConfig = {

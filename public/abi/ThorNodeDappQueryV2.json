@@ -1,0 +1,1388 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "previousAdmin",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newAdmin",
+        "type": "address"
+      }
+    ],
+    "name": "AdminChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "beacon",
+        "type": "address"
+      }
+    ],
+    "name": "BeaconUpgraded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "implementation",
+        "type": "address"
+      }
+    ],
+    "name": "Upgraded",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "capsulesNFT",
+    "outputs": [
+      {
+        "internalType": "contract Capsules",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "driftOdin",
+    "outputs": [
+      {
+        "internalType": "contract DriftNodes",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "driftThor",
+    "outputs": [
+      {
+        "internalType": "contract DriftNodes",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "odins",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "thors",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "getDriftsByIds",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "nodeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "tier",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "creationTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastClaimTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewards",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dueDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "multiplier",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardsActivatedTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fixedRewardPerNode",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "availablePerksSlots",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perks",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "address",
+            "name": "currentOwner",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "currentVrr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRewardsActivated",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "vestedDays",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "claimDay",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksPct",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksEndTime",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Node[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_nodeType",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_reward",
+        "type": "uint256"
+      }
+    ],
+    "name": "getEstimatedClaimTime",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "getGameloopAssets",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isOriginCapsule",
+            "type": "bool"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct Capsules.CapsuleEntity[]",
+        "name": "",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "nft",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Gameloop[]",
+        "name": "",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "perkType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "duration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nodeType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct Perks.PerkEntity[]",
+        "name": "",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "nft",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Gameloop[]",
+        "name": "",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isOdinCard",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "isDirectBurnCard",
+            "type": "bool"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct KeyCards.CardEntity[]",
+        "name": "",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "nft",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Gameloop[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "getNodeCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "count",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "getNodes",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "nodeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "tier",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "creationTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastClaimTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewards",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dueDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "multiplier",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardsActivatedTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fixedRewardPerNode",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "availablePerksSlots",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perks",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "address",
+            "name": "currentOwner",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "currentVrr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRewardsActivated",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "vestedDays",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "claimDay",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksPct",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksEndTime",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Node[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "odins",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "thors",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "getOriginByIds",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "nodeType",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "tier",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "image",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "creationTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastClaimTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewards",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dueDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "multiplier",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardsActivatedTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "fixedRewardPerNode",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "availablePerksSlots",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perks",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "address",
+            "name": "currentOwner",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "currentVrr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasBid",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "bidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "bidPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bidExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "otcBidder",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "otcPaymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "otcExpiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "minter",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRewardsActivated",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "vestedDays",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "claimDay",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksPct",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "perksEndTime",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct DappQueryV2.Node[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_ogOdin",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_ogThor",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_dOdin",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_dThor",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_keys",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_perks",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_capsule",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_marketplace",
+        "type": "address"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "keysNFT",
+    "outputs": [
+      {
+        "internalType": "contract KeyCards",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "marketplace",
+    "outputs": [
+      {
+        "internalType": "contract Marketplace",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ogOdin",
+    "outputs": [
+      {
+        "internalType": "contract OriginNodes",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ogThor",
+    "outputs": [
+      {
+        "internalType": "contract OriginNodes",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "perksNFT",
+    "outputs": [
+      {
+        "internalType": "contract Perks",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "proxiableUUID",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_ogOdin",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_ogThor",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_dOdin",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_dThor",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_keys",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_perks",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_capsule",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_marketplace",
+        "type": "address"
+      }
+    ],
+    "name": "updateNodeContracts",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newImplementation",
+        "type": "address"
+      }
+    ],
+    "name": "upgradeTo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newImplementation",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "upgradeToAndCall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]

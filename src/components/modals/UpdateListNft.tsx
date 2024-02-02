@@ -1,22 +1,29 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import { Box, Grid, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Grid,
+  IconButton,
+  TextField,
+  Typography,
+  useMediaQuery,
+} from '@mui/material';
 import Image from 'next/image';
 import { useSelector } from 'react-redux';
 import { MODAL_TYPES, useGlobalModalContext } from './GlobleModal';
-import { palette } from '../../theme/palette';
 import {
   useGetApproval,
   useUpdateListNFT,
   useSetApproval,
 } from '../../hooks/useNFTDetail';
 import { ethers, BigNumberish } from 'ethers';
-import { useAccount, useWaitForTransaction } from 'wagmi';
+import { useAccount } from 'wagmi';
 import Loader from '../common/Loader';
 import {
   useMarketplaceAddress,
   useGetOrderByNft,
+  useGetTransaction,
 } from '../../hooks/Marketplace';
 import {
   dottedAddress,
@@ -28,11 +35,13 @@ import { useChain } from '../../utils/web3Utils';
 import {
   getValidCurrency,
   isNode as isNodeNFT,
-  numberExponentToLarge,
   formatNumber,
 } from '../../utils/common';
-import SelectBox from '../common/SelectBox';
 import { useBalance } from '../../hooks/useToken';
+import { ToastSeverity } from '@/redux/slices/toastSlice';
+import { useTheme } from '@mui/material/styles';
+import CurrencySelect from '@/components/common/CurrencySelect';
+import CloseIcon from '@mui/icons-material/Close';
 
 type Props = {
   open: boolean;
@@ -62,22 +71,30 @@ const UpdateListNft = (props: Props) => {
   const [isNode, setIsNode] = useState(true);
   const currencies = getValidCurrency(isNode);
   const [currency, setCurrency] = useState(currencies[0].value);
-
   const { address: accountAddress } = useAccount();
+  const editListNFTToast = {
+    message: 'Updating List Price...',
+    severity: ToastSeverity.INFO,
+    image: listNFT?.nftImage || 'images/nft-placeholder.png',
+  };
+  const txnToast = {
+    message: 'List Price Updated',
+    severity: ToastSeverity.SUCCESS,
+    image: listNFT?.nftImage || 'images/nft-placeholder.png',
+    autoHideDuration: 5000,
+  };
   const {
     write: listNFTWrite,
     isLoading: listNFTLoading,
     isSuccess: listNFTSuccess,
     isError: listNFTError,
     data: listTransactionData,
-  } = useUpdateListNFT();
+  } = useUpdateListNFT(editListNFTToast);
   const {
     data: writeTransactionResult,
     isError: writeTransactionError,
     isLoading: writeTransactionLoading,
-  } = useWaitForTransaction({
-    hash: listTransactionData?.hash,
-  });
+  } = useGetTransaction(listTransactionData?.hash, txnToast);
 
   const { data: order } = useGetOrderByNft(
     listNFT?.nftAddress,
@@ -114,46 +131,35 @@ const UpdateListNft = (props: Props) => {
 
   const chain = useChain();
 
-  const { data: usdFromAvax } = useGetUsdFromAvax(
-    listPrice ? listPrice : '0',
-    chain
-  );
+  const { data: usdFrom1Thor } = useGetUsdFromThor('1', chain);
+  const { data: usdFrom1Avax } = useGetUsdFromAvax('1', chain);
 
-  const { data: usdFromThor } = useGetUsdFromThor(
-    listPrice ? listPrice : '0',
-    chain
-  );
+  const pricebyCurrency = useMemo(() => {
+    if (!(usdFrom1Thor && usdFrom1Avax)) return [0, 0, 0];
+    return [formatDecimals(usdFrom1Avax), formatDecimals(usdFrom1Thor), '1'];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usdFrom1Thor, usdFrom1Avax, listPrice]);
 
   const balance = useBalance('AVAX');
   const thorBalance = useBalance('THOR');
-
+  const usdcBalance = useBalance('USDCE');
   useEffect(() => {
-    const price = formatDecimalsV2((order as any)?.price);
-
-    if (listNFT?.status) setListPrice(price);
-    else setListPrice('0');
+    if (order && listNFT) {
+      const price = formatDecimalsV2(
+        (order as any)?.price,
+        (order as any)?.paymentType === 2 ? 6 : 18
+      );
+      if (listNFT?.status) setListPrice(price);
+      else setListPrice('0');
+      setCurrency((order as any)?.paymentType);
+    }
   }, [order, listNFT]);
 
   useEffect(() => {
-    let convertedValue = 0;
-    // AVAX
-    if (currency === 0) {
-      convertedValue = Number(usdFromAvax);
-    }
-    // THOR
-    if (currency === 1) {
-      convertedValue = Number(usdFromThor);
-    }
-    if (convertedValue) {
-      const price = Number(
-        ethers.utils.formatEther(
-          numberExponentToLarge(convertedValue.toString())
-        )
-      );
-      setListPriceUSD(price);
-      setListFeeUSD((feePercentage / 100) * price);
-    }
-  }, [usdFromAvax, usdFromThor, currency]);
+    const price = Number(listPrice) * Number(pricebyCurrency[currency]);
+    setListPriceUSD(price);
+    setListFeeUSD((feePercentage / 100) * price);
+  }, [currency, listPrice, pricebyCurrency]);
 
   const handleChangePrice = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event?.target.value.length < 20) {
@@ -162,10 +168,8 @@ const UpdateListNft = (props: Props) => {
     }
   };
 
-  const handleSelectCurrency: React.ChangeEventHandler<HTMLSelectElement> = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setCurrency(Number(event.target.value));
+  const handleSelectCurrency = (value: number) => {
+    setCurrency(value);
   };
 
   const listPriceError = useMemo(() => {
@@ -192,13 +196,6 @@ const UpdateListNft = (props: Props) => {
   }, [setApprovalSuccess, refetchGetApproval]);
 
   useEffect(() => {
-    const html = document.querySelector('html');
-    if (html) {
-      html.style.overflow = open ? 'hidden' : 'auto';
-    }
-  }, [open]);
-
-  useEffect(() => {
     if (listNFTSuccess && openToast) {
       openToast({
         isSuccess: true,
@@ -218,20 +215,51 @@ const UpdateListNft = (props: Props) => {
         confirmBtn: 'Save',
       });
       handleClose();
-
       return;
     }
 
     if (userApproval) {
+      const acceptPayment = ['0', '0', '0'];
+      acceptPayment[0] = ethers.utils
+        .parseEther(
+          currency === 0
+            ? Number(listPrice).toString()
+            : (
+                (Number(listPrice) * Number(pricebyCurrency[currency])) /
+                Number(pricebyCurrency[0])
+              ).toFixed(3)
+        )
+        .toString();
+      acceptPayment[1] = ethers.utils
+        .parseEther(
+          currency === 1
+            ? Number(listPrice).toString()
+            : (
+                (Number(listPrice) * Number(pricebyCurrency[currency])) /
+                Number(pricebyCurrency[1])
+              ).toFixed(3)
+        )
+        .toString();
+      acceptPayment[2] = ethers.utils
+        .parseUnits(
+          currency === 2
+            ? Number(listPrice).toString()
+            : (
+                (Number(listPrice) * Number(pricebyCurrency[currency])) /
+                Number(pricebyCurrency[2])
+              ).toFixed(3),
+          6
+        )
+        .toString();
+
       listNFTWrite({
         recklesslySetUnpreparedArgs: [
           1,
           currency,
           listNFT?.nftAddress.toLowerCase(),
           listNFT?.tokenId,
-          ethers.utils.parseEther(listPrice.toString()),
-          // TODO: must be updated according to contract update
-          9999999999999,
+          acceptPayment[currency],
+          acceptPayment,
         ],
       });
       handleClose();
@@ -244,23 +272,29 @@ const UpdateListNft = (props: Props) => {
   };
 
   const usdBalancePrice = useMemo(() => {
-    if (balance || thorBalance) {
+    if (balance || thorBalance || usdcBalance) {
       const tempTotalPrice =
-        currency === 0 ? formatDecimals(balance) : formatDecimals(thorBalance);
+        currency === 0
+          ? formatDecimals(balance)
+          : currency === 1
+          ? formatDecimals(thorBalance)
+          : formatDecimals(usdcBalance, 6);
       return (
         Number(tempTotalPrice) *
         (currency === 0
-          ? usdFromAvax
-            ? Number(ethers.utils.formatEther(usdFromAvax as BigNumberish))
+          ? usdFrom1Avax
+            ? Number(ethers.utils.formatEther(usdFrom1Avax as BigNumberish))
             : 0
-          : usdFromThor
-          ? Number(ethers.utils.formatEther(usdFromThor as BigNumberish))
-          : 0)
+          : currency === 1
+          ? usdFrom1Thor
+            ? Number(ethers.utils.formatEther(usdFrom1Thor as BigNumberish))
+            : 0
+          : 1)
       );
     } else {
       return 0;
     }
-  }, [balance, thorBalance, currency, usdFromAvax, usdFromThor]);
+  }, [balance, thorBalance, currency, usdFrom1Avax, usdFrom1Thor, usdcBalance]);
 
   useEffect(() => {
     if (listNFT && listNFT.nftAddress) {
@@ -268,6 +302,8 @@ const UpdateListNft = (props: Props) => {
       setIsNode(isNodeNFTAddress);
     }
   }, [listNFT, chain]);
+  const theme = useTheme();
+  const matchSmDown = useMediaQuery(theme.breakpoints.down('sm'));
 
   return (
     <Box>
@@ -286,6 +322,7 @@ const UpdateListNft = (props: Props) => {
             boxRadius: 'none',
             margin: 1,
             width: '100%',
+            overflow: 'auto',
           },
           '& .MuiDialog-container': {
             background: 'rgba(255, 255, 255, 0.5) !important',
@@ -317,100 +354,89 @@ const UpdateListNft = (props: Props) => {
                   mt: { miniMobile: '49px', sm: '1px' },
                 }}
               >
-                <Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}
+                >
                   <Box
                     sx={{
-                      width: '190px',
+                      width: matchSmDown ? '100%' : '190px',
                       height: '26px',
-                      background: palette.primary.fire,
+                      bgcolor: 'primary.main',
                       display: 'flex',
                       justifyContent: 'center',
                       aligItems: 'center',
-                      mb: 1,
+                      mb: matchSmDown ? 1 : 2,
                       paddingTop: 1,
                     }}
                   >
                     <Typography
                       variant="p-md"
-                      sx={{ color: '#fff', fontSize: { miniMobile: '12px' } }}
+                      sx={{
+                        color: 'primary.contrastText',
+                        fontSize: { miniMobile: '12px' },
+                      }}
                     >
                       NFT being listed
                     </Typography>
                   </Box>
                   <Box
                     sx={{
-                      height: {
-                        miniMobile: 190,
-                        xs: 190,
-                        sm: 190,
-                        md: 190,
-                        lg: 190,
-                      },
-                      width: {
-                        miniMobile: 190,
-                        xs: 190,
-                        sm: 190,
-                        md: 190,
-                        lg: 190,
-                      },
+                      width: matchSmDown ? '165px' : '197px',
+                      position: 'relative',
+                      textAlign: matchSmDown ? 'center' : 'unset',
                     }}
                   >
                     <img
                       src={listNFT?.nftImage || '/images/nftImage.png'}
                       alt="NFTS"
-                      width="100%"
-                      height="100%"
+                      width={matchSmDown ? '164px' : '197px'}
+                      height="auto"
                     />
+                    <Typography
+                      variant="lbl-md"
+                      sx={{
+                        width: '80%',
+                        display: 'block',
+                        position: 'absolute',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        bottom: '15px',
+                        left: '15px',
+                        right: 0,
+                        marginTop: 1,
+                      }}
+                    >
+                      {listNFT?.nftName ?? ''}
+                    </Typography>
                   </Box>
-                </Box>
-                <Box
-                  sx={{
-                    ml: { miniMobile: 2, xs: 2, sm: 4, md: 0, lg: 0 },
-                    position: 'absolute',
-                    top: { miniMobile: '215px', sm: '170px' },
-                    left: '16px',
-                  }}
-                >
-                  <Typography
-                    variant="p-lg"
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      aligItems: 'center',
-
-                      marginTop: 1,
-                    }}
-                  >
-                    {listNFT?.nftName}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      aligItems: 'center',
-
-                      marginTop: 1,
-                    }}
-                  >
-                    by {listNFT?.by}
-                  </Typography>
                 </Box>
               </Box>
             </Grid>
             <Grid item md={7.5} miniMobile={12} sm={10} xs={12}>
               <Box
                 sx={{
-                  background: '#FAFAFA',
+                  bgcolor: 'background.paper',
                   boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.24)',
                   p: 3,
                   position: 'relative',
                 }}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
-                  onClick={handleClose}
+                  sx={{
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                  }}
                 >
-                  <Image src="/images/cross.svg" width={16} height={16} />
+                  <IconButton aria-label="close" onClick={handleClose}>
+                    <CloseIcon />
+                  </IconButton>
                 </Box>
                 <Box>
                   <Typography
@@ -426,15 +452,15 @@ const UpdateListNft = (props: Props) => {
                   </Typography>
                   {/* === */}
                   <Box
-                    sx={{
+                    sx={(theme) => ({
                       display: { miniMobile: 'content', sm: 'block' },
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       mb: 3.8,
                       mt: 3,
                       p: 2,
-                      border: '1px solid rgba(0, 0, 0, 0.3)',
-                    }}
+                      border: `1px solid ${theme.palette.divider}`,
+                    })}
                   >
                     <Box
                       sx={{ display: 'flex', justifyContent: 'space-between' }}
@@ -476,7 +502,7 @@ const UpdateListNft = (props: Props) => {
                       >
                         <Typography
                           sx={{
-                            color: 'rgba(29, 185, 84, 1)',
+                            color: 'success.main',
                             mr: 1,
                             fontSize: '14px',
                             fontWeight: 700,
@@ -502,24 +528,25 @@ const UpdateListNft = (props: Props) => {
                       </Typography>
                       <Box>
                         <Typography variant="p-md-bk">
-                          {isNode
-                            ? currency === 0
-                              ? (balance &&
-                                  Number(formatDecimals(balance)).toFixed(3)) +
-                                ' AVAX'
-                              : (thorBalance &&
-                                  Number(formatDecimals(thorBalance)).toFixed(
-                                    3
-                                  )) + ' THOR'
-                            : (balance &&
+                          {currency === 0
+                            ? (balance &&
                                 Number(formatDecimals(balance)).toFixed(3)) +
-                              ' AVAX'}
+                              ' AVAX'
+                            : currency === 1
+                            ? (thorBalance &&
+                                Number(formatDecimals(thorBalance)).toFixed(
+                                  3
+                                )) + ' THOR'
+                            : (usdcBalance &&
+                                Number(formatDecimals(usdcBalance, 6)).toFixed(
+                                  3
+                                )) + ' USDC.e'}
                         </Typography>
                         <Typography
                           sx={{ fontSize: '12px', textAlign: 'right' }}
                         >
                           {usdBalancePrice &&
-                            usdBalancePrice.toFixed(3) + ' USD'}
+                            usdBalancePrice.toFixed(3) + ' 1 USD'}
                         </Typography>
                       </Box>
                     </Box>{' '}
@@ -532,7 +559,6 @@ const UpdateListNft = (props: Props) => {
                         inputProps={{
                           sx: {
                             fontSize: '18px',
-                            color: 'rgba(0, 0, 0, 0.24)',
                             with: '100%',
                           },
                         }}
@@ -559,36 +585,11 @@ const UpdateListNft = (props: Props) => {
                       />
                     </Box>
 
-                    <Box
-                      sx={{
-                        'display': 'flex',
-                        // position: 'absolute',
-                        'alignItems': 'center',
-                        'top': '15px',
-                        'left': '70%',
-                        'borderBottom': '1px solid rgba(0, 0, 0)',
-                        'borderRight': '1px solid rgba(0, 0, 0)',
-                        '&:hover': {
-                          borderBottom: '2px solid rgba(0, 0, 0)',
-                          borderRight: '2px solid rgba(0, 0, 0)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ m: '0px 12px 0px 8px' }}>
-                        <Image
-                          src={`/images/${
-                            currency === 0 ? 'avax' : 'thor'
-                          }Icon.svg`}
-                          height={14}
-                          width={14}
-                          objectFit="contain"
-                        />
-                      </Box>
-                      <SelectBox
-                        onChange={handleSelectCurrency}
-                        defaultValue={currency}
-                        options={currencies}
+                    <Box mt={'13px'}>
+                      <CurrencySelect
+                        currencies={currencies}
                         value={currency}
+                        onChange={handleSelectCurrency}
                       />
                     </Box>
                   </Box>
@@ -598,7 +599,7 @@ const UpdateListNft = (props: Props) => {
                     <Typography
                       sx={{
                         fontSize: '18px',
-                        color: 'rgba(0, 0, 0, 0.24)',
+                        color: 'text.secondary',
                       }}
                     >
                       {isNode
@@ -613,7 +614,7 @@ const UpdateListNft = (props: Props) => {
                   <Box>
                     <Typography
                       sx={{
-                        color: '#181F3F',
+                        color: 'success.main',
                         // fontFamily: 'Nexa',
                         fontWeight: 400,
                         fontSize: '12px',
@@ -684,17 +685,8 @@ const UpdateListNft = (props: Props) => {
                           !userApproval)
                       }
                       variant="contained"
+                      fullWidth
                       onClick={handleClick}
-                      sx={{
-                        'borderRadius': '0%',
-                        'width': '100%',
-                        'maxWidth': '100%',
-                        ':disabled': {
-                          backgroundColor: '#F3523F',
-                          color: 'white',
-                          opacity: 0.5,
-                        },
-                      }}
                     >
                       {listNFTLoading ||
                       setApprovalLoading ||
@@ -705,7 +697,7 @@ const UpdateListNft = (props: Props) => {
                         <Loader size="2.5rem" sx={{ color: 'white' }} />
                       ) : (
                         <Typography variant="p-md">
-                          {userApproval ? 'List NFT' : 'Approval Request'}
+                          {userApproval ? 'Edit Price' : 'Approval Request'}
                         </Typography>
                       )}
                     </Button>

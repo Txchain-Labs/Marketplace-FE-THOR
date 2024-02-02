@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { request, gql } from 'graphql-request';
 import {
   useAccount,
   useBalance,
@@ -33,12 +34,16 @@ import {
   ToastSeverity,
 } from '../redux/slices/toastSlice';
 import { UserAllFavorites } from '../utils/types';
+import { setDataRefetching } from '@/redux/slices/managerBagSlice';
+
+import { Nft } from '@/models/Nft';
 
 export type NFTItemType = {
   id: string;
   img: string;
   liked: boolean;
   collection_address?: string;
+  token_address?: string;
   token_id?: string;
 };
 
@@ -135,10 +140,10 @@ export function useAddLike() {
   return useMutation({
     mutationFn: (args: {
       user_id: string;
-      nft_id: string;
+      nft_id?: string;
       collection_address: string;
       chainid: number;
-      token_id: number;
+      token_id: string | number;
     }) =>
       axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/favs/like-unsynced`,
@@ -146,10 +151,10 @@ export function useAddLike() {
       ),
     onMutate: async (args: {
       user_id: string;
-      nft_id: string;
+      nft_id?: string;
       collection_address: string;
       chainid: number;
-      token_id: number;
+      token_id: string | number;
     }) => {
       // Snapshot the previous value
       const queryKey = ['favorites', chain?.id, args.user_id];
@@ -180,6 +185,9 @@ export function useAddLike() {
     onSettled: (_data, _err, { user_id }) => {
       void queryClient.invalidateQueries({
         queryKey: ['favorites', chain?.id, user_id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['nftsfvrt', user_id],
       });
     },
   });
@@ -266,7 +274,6 @@ export const useGetApproval = (ownerAddress: string, nftAddress: string) => {
     functionName: 'isApprovedForAll',
     args: [ownerAddress, marketplaceAddress],
     watch: true,
-    cacheTime: 60_000,
     enabled: Boolean(marketplaceAddress && ownerAddress),
   });
 };
@@ -302,18 +309,21 @@ export const useListNFT = (toastData?: toastOptions) => {
             message: toastData?.message,
             severity: toastData?.severity,
             image: toastData?.image,
+            itemCount: toastData?.itemCount,
           })
         );
       }
+      dispatch(setDataRefetching());
     },
     onError: (e) => {
-      console.log(e, 'listNFT error');
+      console.log(e, 'listNFT error -');
       if (toastData) {
         dispatch(
           showToast({
             message: 'Error in Listing NFT',
             severity: ToastSeverity.ERROR,
             image: toastData?.image,
+            itemCount: toastData?.itemCount,
           })
         );
       }
@@ -321,19 +331,36 @@ export const useListNFT = (toastData?: toastOptions) => {
   });
 };
 
-export const useUpdateListNFT = () => {
-  // const dispatch = useDispatch();
+export const useUpdateListNFT = (toastData?: toastOptions) => {
+  const dispatch = useDispatch();
   const marketplaceAddress = useMarketplaceAddress();
   return useContractWrite({
     mode: 'recklesslyUnprepared',
     address: marketplaceAddress,
     abi: marketplaceAbi,
     functionName: 'updateOrder',
-    onSuccess: (e) => {
-      console.log(e, 'updateOrder success');
+    onSuccess: () => {
+      if (toastData) {
+        dispatch(
+          showToast({
+            message: toastData?.message,
+            severity: toastData?.severity,
+            image: toastData?.image,
+          })
+        );
+      }
+      dispatch(setDataRefetching());
     },
-    onError: (e) => {
-      console.log(e, 'updateOrder error');
+    onError: () => {
+      if (toastData) {
+        dispatch(
+          showToast({
+            message: 'Error in Updating List Price',
+            severity: ToastSeverity.ERROR,
+            image: toastData?.image,
+          })
+        );
+      }
     },
     // onSuccess: (data) => {
     //   dispatch(setRefetch(data));
@@ -357,9 +384,11 @@ export const useUnListNFT = (toastData?: toastOptions) => {
             message: toastData?.message,
             severity: toastData?.severity,
             image: toastData?.image,
+            itemCount: toastData?.itemCount,
           })
         );
       }
+      dispatch(setDataRefetching());
     },
     onError: (e) => {
       console.log(e, 'delistNFT error');
@@ -369,6 +398,7 @@ export const useUnListNFT = (toastData?: toastOptions) => {
             message: 'Error in Unlisting NFT',
             severity: ToastSeverity.ERROR,
             image: toastData?.image,
+            itemCount: toastData?.itemCount,
           })
         );
       }
@@ -395,7 +425,7 @@ export function useGetNFTsByWallet(address: string) {
   return useQuery({
     queryKey: ['nftsByWallet', chain?.id],
     queryFn: () => fetchNFTsByWallet(chain?.id as number),
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     enabled: Boolean(address && chain?.id),
   });
 }
@@ -435,7 +465,7 @@ export const useGetNFTList = (address: string) => {
     return axios({
       url: subgraphUrl,
       method: 'post',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Authorization': null },
       data: {
         query: nftListQuery,
       },
@@ -443,14 +473,14 @@ export const useGetNFTList = (address: string) => {
   }
 
   return useQuery(['listNFT', address, chain, refetch], listNFT, {
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     enabled: Boolean(address),
   });
 };
 
 export const useGetNFTMetadata = (listings: any, start: number) => {
   const chain = useChain();
-  const fetchNFTsMetadata = async (chainId: string): Promise<NFTItemType[]> => {
+  const fetchNFTsMetadata = async (chainId: string): Promise<Nft[]> => {
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/nfts/getNFTsByListing`,
@@ -466,7 +496,7 @@ export const useGetNFTMetadata = (listings: any, start: number) => {
   return useQuery({
     queryKey: ['nftsMetadata', listings],
     queryFn: () => fetchNFTsMetadata(chain?.id.toString()),
-    refetchInterval: 30_000,
+    refetchInterval: 120_000,
     enabled: Boolean(listings?.length && chain?.id),
   });
 };
@@ -540,6 +570,21 @@ export const useGetFloorPriceAvax = (nftAddress: string) => {
   const chain = useChain();
   const subgraphUrl = getSubgraphUrl(chain?.id);
   const floorPriceQuery = fetchFloorPriceQuery(nftAddress, 0);
+
+  async function getFloorPrice() {
+    return funcGetFloorPrice(subgraphUrl, floorPriceQuery);
+  }
+
+  return useQuery(['getFloorPrice', nftAddress], getFloorPrice, {
+    refetchInterval: 2 * 60 * 1000,
+    enabled: !!nftAddress,
+  });
+};
+
+export const useGetFloorPriceThor = (nftAddress: string) => {
+  const chain = useChain();
+  const subgraphUrl = getSubgraphUrl(chain?.id);
+  const floorPriceQuery = fetchFloorPriceQuery(nftAddress, 1);
 
   async function getFloorPrice() {
     return funcGetFloorPrice(subgraphUrl, floorPriceQuery);
@@ -667,7 +712,7 @@ export const useGetActiveBids = (bidderAddress: string) => {
     return axios({
       url: subgraphUrl,
       method: 'post',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Authorization': null },
       data: {
         query: activeBidsQuery,
       },
@@ -684,20 +729,12 @@ export function useGetNFTDetail(collectionAddress: string, tokenId: string) {
   const chain = useChain();
   const fetchNFTDetail = async (chainId: number): Promise<NFTItemType[]> => {
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/nfts/metadataByNfts`,
-        {
-          chainId,
-          nfts: [
-            {
-              nftAddress: collectionAddress,
-              tokenId,
-            },
-          ],
-        }
+      const res = await axios.get(
+        `${
+          process.env.NEXT_PUBLIC_BACKEND_URL
+        }/nfts/nftDetail/${chainId}/${collectionAddress?.toLowerCase()}/${tokenId}`
       );
-      console.log('metadata resp', res.data);
-      return res.data.code === 200 ? res.data.data[0] : [];
+      return res.data.code === 200 ? res.data.data : [];
     } catch (error) {
       console.log(error);
     }
@@ -707,7 +744,7 @@ export function useGetNFTDetail(collectionAddress: string, tokenId: string) {
   return useQuery({
     queryKey: ['nftDetail', collectionAddress, tokenId, chain?.id],
     queryFn: () => fetchNFTDetail(chain?.id as number),
-    // refetchInterval: 120_000,
+    refetchInterval: 30_000,
     enabled: Boolean(collectionAddress && tokenId && chain?.id),
   });
 }
@@ -721,7 +758,7 @@ export const useGetReceivedBids = (ownerAddress: string) => {
     return axios({
       url: subgraphUrl,
       method: 'post',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Authorization': null },
       data: {
         query: receivedBidsQuery,
       },
@@ -733,6 +770,66 @@ export const useGetReceivedBids = (ownerAddress: string) => {
     enabled: !!ownerAddress,
   });
 };
+
+export function useGetCollectionAnalytics(
+  collectionAddress: string,
+  start: number | string,
+  end: number | string = undefined
+) {
+  start = start?.toString();
+  end = end?.toString();
+
+  const chain = useChain(),
+    chainId = chain?.id;
+
+  const endpoint = getSubgraphUrl(chainId);
+
+  const getCollectionAnalyticsQuery = gql`
+      query GetCollectionAnalytics(
+          $nftAddress: String
+          $start: String
+      ) {
+          collectionAnalytics(
+              first: 8
+              orderBy: updatedAt
+              orderDirection: desc
+              where: {
+                  nftAddress: $nftAddress
+                  updatedAt_gte: $start
+                  ${end ? `updatedAt_lt: ${end}` : ''}
+              }
+          ) {
+              date
+              id
+              nftAddress
+              sales
+              updatedAt
+              volumeAvax
+              volumeThor
+          }
+      }
+`;
+
+  const variables = {
+    nftAddress: collectionAddress,
+    start,
+  };
+
+  return useQuery({
+    queryKey: ['collection_analytics', collectionAddress, chainId, start, end],
+    queryFn: async () => {
+      const queryResult: any = await request(
+        endpoint,
+        getCollectionAnalyticsQuery,
+        variables
+      );
+
+      return queryResult.collectionAnalytics;
+    },
+    enabled: !!collectionAddress && !!chainId,
+  });
+}
+
 export function useGetAllFavorites(userId: string | undefined) {
   const chain = useChain();
   const fetchAllFavorites = async (): Promise<UserAllFavorites[]> => {
@@ -753,5 +850,32 @@ export function useGetAllFavorites(userId: string | undefined) {
     refetchInterval: 30_000,
     enabled: Boolean(chain?.id && userId),
     placeholderData: [],
+  });
+}
+
+export function useGetIsLikedUnsynced(
+  userId: string,
+  collection_address: string,
+  token_id: string
+) {
+  const chain = useChain();
+  const fetchNFTFavoriteStatus = async () => {
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/favs/is-liked-unsynced/${chain?.id}/${userId}/${collection_address}/${token_id}`
+      );
+      return res?.data?.code === 200 ? res?.data.data : false;
+    } catch (error) {
+      console.log(error);
+    }
+    return false;
+  };
+
+  return useQuery({
+    queryKey: ['singleNFTFavoriteStatus', chain?.id, userId],
+    queryFn: () => fetchNFTFavoriteStatus(),
+    refetchInterval: false,
+    enabled: Boolean(chain?.id && userId && collection_address && token_id),
+    placeholderData: false,
   });
 }

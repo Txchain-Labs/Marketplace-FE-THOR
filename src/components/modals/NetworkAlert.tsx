@@ -100,7 +100,11 @@ const NetworkAlert = ({ open, handleClose }: Props) => {
           <Box sx={borderLeft}></Box>
           <Box sx={borderRight}></Box>
           <CloseIcon
-            sx={{ alignSelf: 'end', cursor: 'pointer', zIndex: 2 }}
+            sx={{
+              alignSelf: 'end',
+              cursor: `url("/images/cursor-pointer.svg"), auto`,
+              zIndex: 2,
+            }}
             onClick={handleClose}
           />
           <Typography

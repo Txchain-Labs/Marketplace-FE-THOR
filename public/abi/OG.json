@@ -460,45 +460,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_owner",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "creationTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "lastClaimTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_image",
-        "type": "string"
-      }
-    ],
-    "name": "createNodeForAddress",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "currentPrice",
     "outputs": [
@@ -774,6 +735,19 @@
         "internalType": "struct NODERewardManagementNFTV3.VRRLog[]",
         "name": "",
         "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getVRRlogLength",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "len",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -1283,6 +1257,29 @@
       }
     ],
     "name": "transferFrom",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_index",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_vrr",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateExistingVRR",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

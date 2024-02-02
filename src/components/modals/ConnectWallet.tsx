@@ -76,9 +76,14 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
         open={true}
         maxWidth="xs"
         fullWidth={true}
-        BackdropProps={{
-          style: {
-            background: 'rgba(255, 255, 255, 0.87)',
+        slotProps={{
+          backdrop: {
+            sx: (theme) => ({
+              bgcolor:
+                theme.palette.mode === 'light'
+                  ? 'rgba(255, 255, 255, 0.87)'
+                  : 'rgba(0, 0, 0, 0.87)',
+            }),
           },
         }}
         sx={{
@@ -89,7 +94,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
             },
             clipPath:
               'polygon( 30% 0%, 92% 0, 100% 15%, 100% 100%, 70% 100%, 8% 100%, 0 85%, 0 0) !important',
-            background: '#000',
+            bgcolor: 'text.primary',
             position: 'relative',
             overflow: 'hidden',
             maxWidth: {
@@ -116,7 +121,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
         <Box
           sx={{
             position: 'absolute',
-            background: '#fff',
+            bgcolor: 'background.paper',
             width: '99.5%',
             height: '99.5%',
             top: '50%',
@@ -135,6 +140,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
               sx={{
                 fontWeight: 400,
                 fontSize: { md: '24px', sm: '16px' },
+                marginTop: '10px',
               }}
             >
               CONNECT WALLET
@@ -154,7 +160,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
                   ref={connectMetaMaskWalletRef}
                   textAlign="center"
                   onClick={connectMetamask}
-                  sx={{ cursor: 'pointer' }}
+                  sx={{ cursor: `url("/images/cursor-pointer.svg"), auto` }}
                   id="connect-wallet-mm-modal"
                 >
                   <img
@@ -173,7 +179,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
                 <Box
                   textAlign="center"
                   onClick={connectWalletConnect}
-                  sx={{ cursor: 'pointer' }}
+                  sx={{ cursor: `url("/images/cursor-pointer.svg"), auto` }}
                 >
                   <img
                     src="/images/wallet-connect-icon.svg"

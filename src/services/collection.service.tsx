@@ -11,6 +11,18 @@ class CollectionsService extends BaseService {
    */
   getCollections = (params?: any): Promise<any> =>
     this.get(`${this.prefix}/collections`, params);
+
+  getSortedCollections = (params?: any): Promise<any> =>
+    this.get(`${this.prefix}/collections/all`, params);
+
+  getRecentlyAddedCollections = (params?: any): Promise<any> =>
+    this.get(`${this.prefix}/collections/recently-added`, params);
+
+  getPromotedCollections = (params?: any): Promise<any> =>
+    this.get(`${this.prefix}/collections/promoted`, params);
+
+  getDynamoDBCollections = (body?: any): Promise<any> =>
+    this.post(`collections/dynamodb`, body);
   /**
    * feature List
    * @param data

@@ -30,7 +30,7 @@ export const cardWrapper = {
 export const cardstyle = (bg_image: string) => {
   return {
     'position': 'relative',
-    'cursor': 'pointer',
+    'cursor': `url("/images/cursor-pointer.svg"), auto`,
     'background': 'inherit',
     'borderRadius': '0px',
     'padding': 0,

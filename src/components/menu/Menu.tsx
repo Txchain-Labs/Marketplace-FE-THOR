@@ -71,16 +71,8 @@ const Menue = (props: any) => {
   const { hideModal } = useGlobalModalContext(); // Loading button state
 
   const handleProfile = (value: number) => {
-    if (value === 1) {
-      //   setView(1);
-      setAnchorEl(null);
-      setActiveColor(false);
-    } else if (value === 2) {
-      //   setView(2);
-      setAnchorEl(null);
-      setActiveColor(false);
-    } else if (value === 3) {
-      //   setView(3);
+    if (value === 1 || value === 2 || value === 3 || value === 4) {
+      //   setView(value);
       setAnchorEl(null);
       setActiveColor(false);
     } else {
@@ -138,10 +130,32 @@ const Menue = (props: any) => {
             </MenuItem>
           </Box>
 
-          {/* <Box sx={menueHover}>
+          <Box sx={menueHover} onClick={() => handleProfile(3)}>
             <Box sx={menuBox} />
-            <MenuItem disabled={true} sx={menuItem}>
-              Transform Nodes{' '}
+            <MenuItem sx={menuItem}>
+              <Link href="/gameloop/transform-node">Transform Node</Link>
+            </MenuItem>
+            {/* <span
+              style={{
+                background: '#F3523F',
+                color: 'white',
+                fontSize: '10px',
+
+                paddingTop: '6px',
+                paddingBottom: '3px',
+                paddingLeft: '8px',
+                paddingRight: '8px',
+                fontWeight: 'bolder',
+              }}
+            >
+              COMING SOON
+            </span> */}
+          </Box>
+
+          <Box sx={menueHover} onClick={() => handleProfile(4)}>
+            <Box sx={menuBox} />
+            <MenuItem sx={menuItem}>
+              <Link href="/gameloop/gamification/keycards">Gamification</Link>
             </MenuItem>
             <span
               style={{
@@ -156,31 +170,9 @@ const Menue = (props: any) => {
                 fontWeight: 'bolder',
               }}
             >
-              COMING SOON
+              Gameloop
             </span>
-          </Box> */}
-
-          {/* <Box sx={menueHover}>
-            <Box sx={menuBox} />
-            <MenuItem disabled={true} sx={menuItem}>
-              Gameloop{' '}
-            </MenuItem>
-            <span
-              style={{
-                background: '#F3523F',
-                color: 'white',
-                fontSize: '10px',
-
-                paddingTop: '6px',
-                paddingBottom: '3px',
-                paddingLeft: '8px',
-                paddingRight: '8px',
-                fontWeight: 'bolder',
-              }}
-            >
-              COMING SOON
-            </span>
-          </Box> */}
+          </Box>
         </Menu>
       )}
       {active === 'art' && (

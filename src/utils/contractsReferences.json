@@ -1,0 +1,28 @@
+{
+  "43113": {
+    "contracts": {
+      "ThorGamification": "0x55cFD0C5388efE6c519b1aACc3bc4Bf0D222678a",
+      "OGNodeThor": "0x0Be69fbD4955eB19E4F6D2f58338592be75476A8",
+      "OGNodeOdin": "0x1De3ebd258f7603888c83A339049501AeaFc6581",
+      "DriftNodeThor": "0x2Aa1Ae3Bbcc5cc66E26D81b0bEC47aB6BD6ceB8f",
+      "DriftNodeOdin": "0x5Af672a8CB0fc468c170f0c094ED01B8f974F714",
+      "ThorKeyNFT": "0xc4D437413ef5E8bA11ff38BdCa79DB60e0492376",
+      "ThorCapsuleNFT": "0xb6bE5520239C89bb28b8D66E17e5C153F83a4475",
+      "ThorPerkNFT": "0xD9B0e871C1b284904B0fC6Ab4BA3c479042131Ef",
+      "DappQueryV2": "0xd3A5079282b86C4aE587A49f55F1fa7B13FE1aE5"
+    }
+  },
+  "43114": {
+    "contracts": {
+      "ThorGamification": "0x64ecd0E998DA4285387d330ffeDB45D9F8553A9d",
+      "OGNodeThor": "0x825189515d0A7756436F0eFb6e4bE5A5aF87e21D",
+      "OGNodeOdin": "0x7325e3564B89968D102B3261189EA44c0f5f1a8e",
+      "DriftNodeThor": "0x5aed0d3Ec43d3ec54F2c546657037877f495380D",
+      "DriftNodeOdin": "0xa91552398449864ea97694AFde6932dB5233698C",
+      "ThorKeyNFT": "0x6FBc108e4aD4324e199A2Ac98C136B38a25A1C6a",
+      "ThorCapsuleNFT": "0x76348A4fC5e8F58C7C7733b41768df7d0ADEd241",
+      "ThorPerkNFT": "0x1eb252B7302A8B672D1bCB8c86C5194862FB17fe",
+      "DappQueryV2": "0xF4fF4A10C385527769eFdFABaa685af0ebbC4Fb6"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Grid,
   Box,
@@ -18,10 +18,10 @@ import {
   useMediaQuery,
   useTheme,
   Paper,
+  Avatar,
 } from '@mui/material';
 import CircularProgress from '@mui/material/CircularProgress';
 import { styled } from '@mui/material/styles';
-import BuyNft from '../../../src/components/modals/BuyNft';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import PlaceBid from '../../../src/components/modals/PlaceBid';
@@ -29,40 +29,49 @@ import Image from 'next/image';
 import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
 import { BigNumber, BigNumberish, ethers } from 'ethers';
 import { useSelector } from 'react-redux';
-import { dottedAddress, formatDecimals } from '../../../src/shared/utils/utils';
-import {
-  MODAL_TYPES,
-  useGlobalModalContext,
-} from '../../../src/components/modals';
-import { palette } from '../../../src/theme/palette';
+import { useDispatch } from '../../../src/redux/store';
+import { showToast, ToastSeverity } from '../../../src/redux/slices/toastSlice';
+import { dottedAddress, formatDecimals } from '@/shared/utils/utils';
+import { MODAL_TYPES, useGlobalModalContext } from '@/components/modals';
+import UpdateListNft from '../../../src/components/modals/UpdateListNft';
 import {
   useGetNFTOwner,
   useGetOtcTokenBids,
   useGetBidsByOrderId,
   useGetUserByAddress,
   useUnListNFT,
+  useGetNFTsFavrt,
   useGetNFTDetail,
-} from '../../../src/hooks/useNFTDetail';
-import { useBalance } from '../../../src/hooks/useToken';
+} from '@/hooks/useNFTDetail';
+import {
+  useGetAcceptPaymentsByNFT,
+  useGetActivePerks,
+  useGetNFTsListed,
+  useGetTokenURI,
+} from '@/hooks/useNodes';
+
+import { useBalance } from '@/hooks/useToken';
 import { useRouter } from 'next/router';
 import {
   formatNumber,
   formattedTime,
-  getMetaDataAttributes,
-  getMetaDataDescription,
   isNode as isNodeNFT,
-  getMetaData,
+  getJsonFromURI,
   getMetaDataName,
+  getMetaDataDescription,
+  getMetaData,
+  getMetaDataAttributes,
+  useIsPerk,
 } from '../../../src/utils/common';
-import { collectionsService } from '../../../src/services/collection.service';
-import { Collection } from '../../../src/models/Collection';
-import { Attribute } from '../../../src/models/Metadata';
-import { Listing } from '../../../src/models/Listing';
+import { collectionsService } from '@/services/collection.service';
+import { Collection } from '@/models/Collection';
+import { Attribute } from '@/models/Metadata';
+import { Listing } from '@/models/Listing';
 
 import styles from './style.module.css';
-import { useChain } from '../../../src/utils/web3Utils';
+import { useChain } from '@/utils/web3Utils';
 import { isMobile, isTablet } from 'react-device-detect';
-
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import {
   useMarketplaceAddress,
   useGetBidByNft,
@@ -71,80 +80,79 @@ import {
   useCancelOtcBid,
   useCancelBid,
   useGetTransaction,
-} from '../../../src/hooks/Marketplace';
-import ListNft from '../../../src/components/modals/ListNft';
-import { bidType } from '../../../src/utils/constants';
+} from '@/hooks/Marketplace';
+import { useGetPerk } from '@/hooks/usePerks';
+import { bidType, getOGNodeContractByChain } from '@/utils/constants';
 import BuyNFTModal from '../../../src/components/modals/BuyNFTModal';
-import {
-  useGetUsdFromAvax,
-  useGetUsdFromThor,
-} from '../../../src/hooks/useOracle';
+import { useGetUsdFromAvax, useGetUsdFromThor } from '@/hooks/useOracle';
 import moment from 'moment';
-import { useGetListingByNft } from '../../../src/hooks/useListings';
+import { useGetListingByNft } from '@/hooks/useListings';
 import AcceptBid from '../../../src/components/modals/AcceptBid';
-import { ToastSeverity } from '../../../src/redux/slices/toastSlice';
 import Link from 'next/link';
-import { NftDataType } from '../../../src/utils/types';
-import { LikeButton } from '../../../src/components/common';
+import { NftDataType } from '@/utils/types';
 import axios from 'axios';
-import { useSetAttribute } from '../../../src/hooks/uiHooks';
-const titlee = {
+import { useSetAttribute } from '@/hooks/uiHooks';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import MultiCurrency from '@/components/icons/MultiCurrency';
+import BatchListNFTModal from '@/components/modals/BatchListNFTModal';
+import { formatPriceByDefaultCurrency } from '@/utils/helper';
+import SortLabel from '@/components/common/SortMenu/SortLabel';
+
+const titleStyle = {
   typography: { md: 'h3-bk', miniMobile: 'h4' },
   lineHeight: { md: '54.58px', miniMobile: '48.51px' },
   display: 'block',
-  textAlign: 'center',
-  color: palette.primary.storm,
+  textAlign: 'left',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   width: '90%',
   whiteSpace: 'nowrap',
 };
-const imgStyle = { display: 'flex', alignItems: 'baseline' };
+const imgStyle = {
+  display: 'flex',
+  alignItems: 'baseline',
+  // ml: { md: 3 },
+};
 
-const box1 = { mt: { xs: 4, md: 8 }, ml: { xs: 1.5, md: 5 }, margin: 'auto' };
-const box2 = { mt: 4, ml: { xs: 1.5, md: 5 } };
-const ownertext = {
-  fontFamily: 'Nexa',
+const box1 = { mt: { xs: 0, md: 4 }, ml: { xs: 0, md: 7 }, margin: 'auto' };
+const ownerText = {
+  fontFamily: isMobile ? 'Nexa-Bold' : 'Nexa',
   fontSize: '14px',
-  fontWeight: isMobile ? 700 : 400,
   lineHeight: '21px',
   letterSpacing: '0.04em',
   textAlign: 'left',
-  color: palette.primary.storm,
 };
-const ownerDetail = { fontWeight: 500, ml: 1, color: palette.primary.storm };
+const ownerDetail = { fontWeight: 500, ml: 1, color: 'primary.main' };
 
 const buttonBox = {
-  // display: { xs: 'block', sm: 'block', md: 'block' },
-  // mt: { xs: 3, md: 6 },
-  // ml: { xs: 0, md: 5 },
-  // mb: { xs: 0, md: 3 },
-  // p: { xs: 1.5, md: 0 },
-  // textAlign: 'center',
+  position: 'fixed',
+  bottom: 0,
+
+  paddingBottom: '60px',
+  width: '35%',
+  gap: '25px',
 
   display: 'flex',
   flexDirection: 'row',
   justifyContent: 'space-evenly',
   zIndex: '1000',
-  width: '100%',
-  position: 'absolute',
-  bottom: 0,
-  marginLeft: '5px',
-  gap: '10px',
+  ml: isMobile ? 0 : 5,
 };
 const buttonBoxMobile = {
   ...buttonBox,
-  position: 'fixed',
+
+  paddingBottom: '10px',
+  gap: '10px',
+
   flexDirection: 'column',
   left: '10px',
   right: '10px',
   marginLeft: '0px',
   width: 'auto',
-  backgroundColor: 'white',
+  backgroundColor: 'background.default',
 };
 
 const divider = {
-  background: 'rgba(0, 0, 0, 0.4)',
   width: { xs: '100%', md: '1px' },
   height: { xs: '1%', md: '80%' },
   mt: 8,
@@ -170,13 +178,11 @@ const StyledTabs: any = styled((props) => (
     top: '25px',
   },
   '& .MuiTabs-indicatorSpan': {
-    // minWidth: 40,
     width: isMobile ? 100 : 40,
     height: isMobile ? 8 : 'auto',
-    backgroundColor: palette.primary.fire,
+    bgcolor: 'primary.main',
   },
   '& .MuiButtonBase-root.MuiTab-root': {
-    color: '#808080!important',
     marginBottom: 0,
     fontFamily: 'Nexa',
     fontSize: '12px',
@@ -184,10 +190,11 @@ const StyledTabs: any = styled((props) => (
     lineHeight: '15px',
     letterSpacing: '0em',
     textAlign: 'left',
-    // margin: '0!important',
-  },
-  '& .MuiButtonBase-root.MuiTab-root.Mui-selected': {
-    color: 'black!important',
+    fontStyle: 'normal',
+    textTransform: 'capitalize',
+    minHeight: '26px',
+    padding: '0px',
+    margin: '0px 20px 45px 0px',
   },
 });
 
@@ -223,6 +230,7 @@ type OwnerButtonProps = {
   activeTab: number;
   refetchListing(): void;
   nftData: any;
+  cta?: any;
 };
 
 const BuyerButtons = (props: BuyerButtonProps) => {
@@ -295,20 +303,17 @@ const BuyerButtons = (props: BuyerButtonProps) => {
 
   const formatedPrice = useMemo(() => {
     if (listing && (listing as any).priceInWei) {
-      return (
-        Number(ethers.utils.formatEther((listing as any)?.priceInWei)) *
-        ((listing as any)?.paymentType === '0'
-          ? avaxPrice
-            ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
-            : 0
-          : thorPrice
-          ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-          : 0)
+      return formatPriceByDefaultCurrency(
+        (listing as any)?.priceInWei,
+        (listing as any)?.paymentType,
+        user?.default_currency,
+        avaxPrice,
+        thorPrice
       );
     } else {
       return 0;
     }
-  }, [thorPrice, avaxPrice, listing]);
+  }, [thorPrice, avaxPrice, listing, user?.default_currency]);
 
   const handleExecuteOrder = () => {
     write({
@@ -401,23 +406,69 @@ const BuyerButtons = (props: BuyerButtonProps) => {
   useEffect(() => {
     refetchSimpleBid();
   }, [cancelSimpleBidLoading, refetchSimpleBid]);
+
   return (
     <>
-      {listing && !isExpired && !isInvalidOwner && !listing?.sold ? (
-        simpleBidLoading ? (
-          <Box sx={{ width: '100%', textAlign: 'center' }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Box sx={isMobile || isTablet ? buttonBoxMobile : buttonBox}>
-            {!isPrivate && (
-              <React.Fragment>
-                {insufficientBalance ? (
-                  <Tooltip title="You do not have enough balance on your wallet">
+      {!isInvalidOwner &&
+        (listing && !isExpired && !listing?.sold ? (
+          simpleBidLoading ? (
+            <Box sx={{ width: '100%', textAlign: 'center' }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={isMobile || isTablet ? buttonBoxMobile : buttonBox}>
+              {!isPrivate && user?.address && (
+                <React.Fragment>
+                  {insufficientBalance ? (
+                    <Tooltip title="You do not have enough balance on your wallet">
+                      <Button
+                        ref={expireBuyButtonRef}
+                        variant="contained"
+                        fullWidth
+                        disabled={true}
+                        onClick={() => {
+                          if (!user?.address) {
+                            showModal(MODAL_TYPES.CONNECT_WALLET, {
+                              title: 'Create instance form',
+                              confirmBtn: 'Save',
+                            });
+                          } else {
+                            setOpenType('purchase');
+                            if (isNode) {
+                              setIsOpen(true);
+                            } else {
+                              handleExecuteOrder();
+                            }
+                          }
+                        }}
+                      >
+                        {isNode ? (
+                          <Typography variant="lbl-md">
+                            {' '}
+                            Buy for {formatNumber(formatedPrice)}{' '}
+                            {user?.default_currency
+                              ? user?.default_currency.replace('USDC', 'USD')
+                              : 'USD'}
+                          </Typography>
+                        ) : (
+                          <Typography variant="lbl-md">
+                            {' '}
+                            Buy for{' '}
+                            {formatDecimals(
+                              listing?.priceInWei,
+                              18,
+                              true
+                            )} AVAX{' '}
+                          </Typography>
+                        )}
+                      </Button>
+                    </Tooltip>
+                  ) : (
                     <Button
-                      ref={expireBuyButtonRef}
-                      variant="nft_primary"
-                      disabled={true}
+                      ref={buyButtonRef}
+                      variant="contained"
+                      fullWidth
+                      disabled={!(collectionAddress && tokenId)}
                       onClick={() => {
                         if (!user?.address) {
                           showModal(MODAL_TYPES.CONNECT_WALLET, {
@@ -437,7 +488,10 @@ const BuyerButtons = (props: BuyerButtonProps) => {
                       {isNode ? (
                         <Typography variant="lbl-md">
                           {' '}
-                          Buy for {formatNumber(formatedPrice)} USD{' '}
+                          Buy for {formatNumber(formatedPrice)}{' '}
+                          {user?.default_currency
+                            ? user?.default_currency.replace('USDC', 'USD')
+                            : 'USD'}
                         </Typography>
                       ) : (
                         <Typography variant="lbl-md">
@@ -451,125 +505,40 @@ const BuyerButtons = (props: BuyerButtonProps) => {
                         </Typography>
                       )}
                     </Button>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    ref={buyButtonRef}
-                    variant="nft_primary"
-                    disabled={!(collectionAddress && tokenId)}
-                    onClick={() => {
-                      if (!user?.address) {
-                        showModal(MODAL_TYPES.CONNECT_WALLET, {
-                          title: 'Create instance form',
-                          confirmBtn: 'Save',
-                        });
-                      } else {
-                        setOpenType('purchase');
-                        if (isNode) {
-                          setIsOpen(true);
+                  )}
+                  {user?.address && (
+                    <Button
+                      ref={placeBidButtonRef}
+                      variant="contained"
+                      fullWidth
+                      color={'secondary'}
+                      // sx={btn1}
+                      onClick={() => {
+                        if (!user?.address) {
+                          showModal(MODAL_TYPES.CONNECT_WALLET, {
+                            title: 'Create instance form',
+                            confirmBtn: 'Save',
+                          });
                         } else {
-                          handleExecuteOrder();
+                          setActiveBidType(bidType.DEFAULT);
+                          setOpenType('bid');
+                          setIsOpen(true);
                         }
-                      }
-                    }}
-                  >
-                    {isNode ? (
-                      <Typography variant="lbl-md">
-                        {' '}
-                        Buy for {formatNumber(formatedPrice)} USD{' '}
-                      </Typography>
-                    ) : (
-                      <Typography variant="lbl-md">
-                        {' '}
-                        Buy for {formatDecimals(
-                          listing?.priceInWei,
-                          18,
-                          true
-                        )}{' '}
-                        AVAX{' '}
-                      </Typography>
-                    )}
-                  </Button>
-                )}
-                <Button
-                  ref={placeBidButtonRef}
-                  variant="nft_secondary"
-                  // sx={btn1}
-                  onClick={() => {
-                    if (!user?.address) {
-                      showModal(MODAL_TYPES.CONNECT_WALLET, {
-                        title: 'Create instance form',
-                        confirmBtn: 'Save',
-                      });
-                    } else {
-                      setActiveBidType(bidType.DEFAULT);
-                      setOpenType('bid');
-                      setIsOpen(true);
-                    }
-                  }}
-                >
-                  <Typography variant="lbl-md"> Place a Bid</Typography>
-                </Button>
-              </React.Fragment>
-            )}
-            {(simpleBidData as any)?.bidder?.toLowerCase() ===
-              user?.address?.toLowerCase() &&
-              !isPrivate && (
-                <Button
-                  ref={removeBidButtonRef}
-                  disabled={cancelSimpleBidLoading}
-                  variant="nft_text"
-                  // sx={btn1}
-                  onClick={() => {
-                    if (!user?.address) {
-                      showModal(MODAL_TYPES.CONNECT_WALLET, {
-                        title: 'Create instance form',
-                        confirmBtn: 'Save',
-                      });
-                    } else {
-                      writeCancelSimpleBid({
-                        recklesslySetUnpreparedArgs: [
-                          collectionAddress,
-                          tokenId,
-                        ],
-                      });
-                    }
-                  }}
-                >
-                  {/* {cancelSimpleBidLoading ? (
-                    <CircularProgress size="2.5rem" sx={{ color: 'white' }} />
-                  ) : ( */}
-                  <Typography variant="lbl-md">Remove my Bid</Typography>
-                  {/* )} */}
-                </Button>
+                      }}
+                    >
+                      <Typography variant="lbl-md">Place a Bid</Typography>
+                    </Button>
+                  )}
+                </React.Fragment>
               )}
-          </Box>
-        )
-      ) : (
-        <Box sx={isMobile || isTablet ? buttonBoxMobile : buttonBox}>
-          {otcBidLoading ? (
-            <CircularProgress />
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography
-                sx={{
-                  px: 2,
-                  pt: 2,
-                  fontKerning: 'none',
-                  lineHeight: '130%',
-                  textAlign: 'center',
-                }}
-                variant="p-lg-bk"
-              >
-                This NFT has not been listed yet, seller might not see the bid.
-              </Typography>
-              <Box
-                sx={{ display: 'flex', justifyContent: 'center', gap: '15px' }}
-              >
-                {!isNormal && (
+              {(simpleBidData as any)?.bidder?.toLowerCase() ===
+                user?.address?.toLowerCase() &&
+                !isPrivate && (
                   <Button
-                    ref={placeBidMobileButtonRef}
-                    variant="nft_secondary"
+                    ref={removeBidButtonRef}
+                    disabled={cancelSimpleBidLoading}
+                    variant="text"
+                    fullWidth
                     // sx={btn1}
                     onClick={() => {
                       if (!user?.address) {
@@ -578,95 +547,157 @@ const BuyerButtons = (props: BuyerButtonProps) => {
                           confirmBtn: 'Save',
                         });
                       } else {
-                        setActiveBidType(bidType.OTC);
-                        setOpenType('bid');
-                        setIsOpen(true);
+                        writeCancelSimpleBid({
+                          recklesslySetUnpreparedArgs: [
+                            collectionAddress,
+                            tokenId,
+                          ],
+                        });
                       }
                     }}
                   >
-                    <Typography variant="lbl-md"> Place a Bid</Typography>
+                    {/* {cancelSimpleBidLoading ? (
+                      <CircularProgress size="2.5rem" sx={{ color: 'white' }} />
+                    ) : ( */}
+                    <Typography variant="lbl-md">Remove my Bid</Typography>
+                    {/* )} */}
                   </Button>
                 )}
-                {otcBidData?.bidder?.toLowerCase() === user?.address &&
-                  !isNormal && (
-                    <Button
-                      ref={removePrivateBidMobileButtonRef}
-                      disabled={cancelOtcBidLoading}
-                      variant="nft_text"
-                      // sx={btn1}
-                      onClick={() => {
-                        if (!user?.address) {
-                          showModal(MODAL_TYPES.CONNECT_WALLET, {
-                            title: 'Create instance form',
-                            confirmBtn: 'Save',
-                          });
-                        } else {
-                          writeCancelOtcBid({
-                            recklesslySetUnpreparedArgs: [
-                              collectionAddress,
-                              tokenId,
-                            ],
-                          });
-                        }
-                      }}
-                    >
-                      {/* {cancelOtcBidLoading ? (
-                        <CircularProgress
-                          size="2.5rem"
-                          sx={{ color: 'white' }}
-                        />
-                      ) : ( */}
-                      <Typography variant="lbl-md">
-                        {' '}
-                        Remove my Private Bid
-                      </Typography>
-                      {/* )} */}
-                    </Button>
-                  )}
-                {listing &&
-                  (isExpired || isInvalidOwner) &&
-                  (simpleBidData as any)?.bidder?.toLowerCase() ===
-                    user?.address?.toLowerCase() &&
-                  !isPrivate && (
-                    <Button
-                      ref={removeBidMobileButtonRef}
-                      disabled={cancelSimpleBidLoading}
-                      variant="nft_text"
-                      // sx={btn1}
-                      onClick={() => {
-                        if (!user?.address) {
-                          showModal(MODAL_TYPES.CONNECT_WALLET, {
-                            title: 'Create instance form',
-                            confirmBtn: 'Save',
-                          });
-                        } else {
-                          writeCancelSimpleBid({
-                            recklesslySetUnpreparedArgs: [
-                              collectionAddress,
-                              tokenId,
-                            ],
-                          });
-                        }
-                      }}
-                    >
-                      {/* {cancelSimpleBidLoading ? (
-                        <CircularProgress
-                          size="2.5rem"
-                          sx={{ color: 'white' }}
-                        />
-                      ) : ( */}
-                      <Typography variant="lbl-md">Remove my Bid</Typography>
-                      {/* )} */}
-                    </Button>
-                  )}
-              </Box>
             </Box>
-          )}
-        </Box>
-      )}
+          )
+        ) : (
+          <Box sx={isMobile || isTablet ? buttonBoxMobile : buttonBox}>
+            {otcBidLoading ? (
+              <CircularProgress />
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography
+                  sx={{
+                    px: 2,
+                    pt: 2,
+                    fontKerning: 'none',
+                    lineHeight: '130%',
+                    textAlign: 'center',
+                  }}
+                  variant="p-lg-bk"
+                >
+                  This NFT has not been listed yet, seller might not see the
+                  bid.
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '15px',
+                  }}
+                >
+                  {!isNormal && user?.address && (
+                    <Button
+                      ref={placeBidMobileButtonRef}
+                      variant="contained"
+                      fullWidth
+                      color={'secondary'}
+                      // sx={btn1}
+                      onClick={() => {
+                        if (!user?.address) {
+                          showModal(MODAL_TYPES.CONNECT_WALLET, {
+                            title: 'Create instance form',
+                            confirmBtn: 'Save',
+                          });
+                        } else {
+                          setActiveBidType(bidType.OTC);
+                          setOpenType('bid');
+                          setIsOpen(true);
+                        }
+                      }}
+                    >
+                      <Typography variant="lbl-md">Place a Bid</Typography>
+                    </Button>
+                  )}
+                  {otcBidData?.bidder?.toLowerCase() === user?.address &&
+                    !isNormal && (
+                      <Button
+                        ref={removePrivateBidMobileButtonRef}
+                        disabled={cancelOtcBidLoading}
+                        variant="text"
+                        fullWidth
+                        // sx={btn1}
+                        onClick={() => {
+                          if (!user?.address) {
+                            showModal(MODAL_TYPES.CONNECT_WALLET, {
+                              title: 'Create instance form',
+                              confirmBtn: 'Save',
+                            });
+                          } else {
+                            writeCancelOtcBid({
+                              recklesslySetUnpreparedArgs: [
+                                collectionAddress,
+                                tokenId,
+                              ],
+                            });
+                          }
+                        }}
+                      >
+                        {/* {cancelOtcBidLoading ? (
+                          <CircularProgress
+                            size="2.5rem"
+                            sx={{ color: 'white' }}
+                          />
+                        ) : ( */}
+                        <Typography variant="lbl-md">
+                          {' '}
+                          Remove my Private Bid
+                        </Typography>
+                        {/* )} */}
+                      </Button>
+                    )}
+                  {listing &&
+                    (isExpired || isInvalidOwner) &&
+                    (simpleBidData as any)?.bidder?.toLowerCase() ===
+                      user?.address?.toLowerCase() &&
+                    !isPrivate && (
+                      <Button
+                        ref={removeBidMobileButtonRef}
+                        disabled={cancelSimpleBidLoading}
+                        variant="text"
+                        fullWidth
+                        // sx={btn1}
+                        onClick={() => {
+                          if (!user?.address) {
+                            showModal(MODAL_TYPES.CONNECT_WALLET, {
+                              title: 'Create instance form',
+                              confirmBtn: 'Save',
+                            });
+                          } else {
+                            writeCancelSimpleBid({
+                              recklesslySetUnpreparedArgs: [
+                                collectionAddress,
+                                tokenId,
+                              ],
+                            });
+                          }
+                        }}
+                      >
+                        {/* {cancelSimpleBidLoading ? (
+                          <CircularProgress
+                            size="2.5rem"
+                            sx={{ color: 'white' }}
+                          />
+                        ) : ( */}
+                        <Typography variant="lbl-md">Remove my Bid</Typography>
+                        {/* )} */}
+                      </Button>
+                    )}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        ))}
     </>
   );
 };
+
+let firstLoading = true;
 
 const OwnerButtons = (props: OwnerButtonProps) => {
   const {
@@ -683,6 +714,7 @@ const OwnerButtons = (props: OwnerButtonProps) => {
     activeTab,
     refetchListing,
     nftData,
+    cta,
   } = props;
   const { data: lastBid, refetch: lastBidRefetch } = useGetBidByNft(
     collectionAddress,
@@ -693,6 +725,8 @@ const OwnerButtons = (props: OwnerButtonProps) => {
     setShowAcceptModal(false);
   };
   const [acceptBidType, setAcceptBidType] = useState(bidType.DEFAULT);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [listNFT, setListNFT] = useState(null);
 
   const { data: lastOtcBid, refetch: lastOtcBidRefetch } = useGetOtcBid(
     collectionAddress,
@@ -719,7 +753,7 @@ const OwnerButtons = (props: OwnerButtonProps) => {
 
   const handleUnlistNFT = async () => {
     await unListNFTWrite({
-      recklesslySetUnpreparedArgs: [collectionAddress, tokenId],
+      recklesslySetUnpreparedArgs: [[collectionAddress], [tokenId]],
     });
     lastBidRefetch();
     lastOtcBidRefetch();
@@ -732,6 +766,10 @@ const OwnerButtons = (props: OwnerButtonProps) => {
 
   const lastOtcBidUSD = useMemo(() => {
     if (lastOtcBid && (lastOtcBid as any).price) {
+      if (Number((lastOtcBid as any)?.paymentType) === 2) {
+        return Number(ethers.utils.formatUnits((lastOtcBid as any)?.price, 6));
+      }
+
       return (
         Number(ethers.utils.formatEther((lastOtcBid as any)?.price)) *
         ((lastOtcBid as any)?.paymentType
@@ -769,33 +807,67 @@ const OwnerButtons = (props: OwnerButtonProps) => {
   ]);
 
   const [acceptBidData, setAcceptBidData] = useState({
-    bidPrice: formatDecimals((lastBid as any)?.price, 18, true),
+    bidPrice: formatDecimals(
+      (lastBid as any)?.price,
+      Number((lastBid as any)?.paymentType) === 2 ? 6 : 18,
+      true
+    ),
     bidExpiresAt: formattedTime((lastBid as any)?.expiresAt),
     paymentType: (lastBid as any)?.paymentType,
   });
 
-  const handleAcceptBid = (_bidType: string) => {
-    setAcceptBidType(_bidType);
-    if (_bidType === bidType.DEFAULT) {
-      // simple
-      setAcceptBidData((prevState) => ({
-        ...prevState,
-        bidPrice: formatDecimals((lastBid as any)?.price, 18, true),
-        bidExpiresAt: (lastBid as any)?.expiresAt.toString(),
-        paymentType: (lastBid as any)?.paymentType,
-      }));
-      setShowAcceptModal(true);
-    } else if (_bidType === bidType.OTC) {
-      // otc
-      setAcceptBidData((prevState) => ({
-        ...prevState,
-        bidPrice: lastOtcBidUSD.toFixed(2),
-        bidExpiresAt: (lastOtcBid as any)?.expiresAt.toString(),
-        paymentType: (lastOtcBid as any)?.paymentType,
-      }));
-      setShowAcceptModal(true);
+  const handleAcceptBid = useCallback(
+    (_bidType: string) => {
+      setAcceptBidType(_bidType);
+      if (_bidType === bidType.DEFAULT) {
+        // simple
+        setAcceptBidData((prevState) => ({
+          ...prevState,
+          bidPrice: formatDecimals(
+            (lastBid as any)?.price,
+            Number((lastBid as any)?.paymentType) === 2 ? 6 : 18,
+            true
+          ),
+          bidExpiresAt: (lastBid as any)?.expiresAt.toString(),
+          paymentType: (lastBid as any)?.paymentType,
+        }));
+        setShowAcceptModal(true);
+      } else if (_bidType === bidType.OTC) {
+        // otc
+        setAcceptBidData((prevState) => ({
+          ...prevState,
+          bidPrice: lastOtcBidUSD.toFixed(2),
+          bidExpiresAt: (lastOtcBid as any)?.expiresAt.toString(),
+          paymentType: (lastOtcBid as any)?.paymentType,
+        }));
+        setShowAcceptModal(true);
+      }
+    },
+    [lastBid, lastOtcBid, lastOtcBidUSD]
+  );
+
+  const handleNormalBidAccept = useCallback(() => {
+    if (!user?.address) {
+      showModal(MODAL_TYPES.CONNECT_WALLET, {
+        title: 'Create instance form',
+        confirmBtn: 'Save',
+      });
+    } else {
+      setOpenType('purchase');
+      handleAcceptBid(bidType.DEFAULT);
     }
-  };
+  }, [handleAcceptBid, setOpenType, showModal, user?.address]);
+  const handlePrivateBidAccept = useCallback(() => {
+    if (!user?.address) {
+      showModal(MODAL_TYPES.CONNECT_WALLET, {
+        title: 'Create instance form',
+        confirmBtn: 'Save',
+      });
+    } else {
+      setOpenType('purchase');
+      handleAcceptBid(bidType?.OTC);
+    }
+  }, [handleAcceptBid, setOpenType, showModal, user?.address]);
 
   const acceptBidResponse = (response: any) => {
     if (response?.isSuccess) {
@@ -804,6 +876,58 @@ const OwnerButtons = (props: OwnerButtonProps) => {
       refetchListing();
     }
   };
+
+  const handleEdit = useCallback(() => {
+    setShowEditModal(!showEditModal);
+
+    setListNFT({
+      nftName: nftData?.nftName,
+      by: nftData?.by,
+      nftImage: nftData?.nftImage,
+      nftAddress: nftData?.nftAddress,
+      tokenId: nftData?.tokenId,
+      status: 'edit',
+    });
+  }, [showEditModal, nftData]);
+
+  const handleModalClick = () => {
+    setShowEditModal(!showEditModal);
+  };
+
+  const handleList = useCallback(() => {
+    if (!user?.address) {
+      showModal(MODAL_TYPES.CONNECT_WALLET, {
+        title: 'Create instance form',
+        confirmBtn: 'Save',
+      });
+    } else {
+      setShowListModal(!showListModal);
+    }
+  }, [showModal, user?.address, showListModal, setShowListModal]);
+
+  const callbackHandleEdit = useCallback(() => {
+    handleEdit();
+  }, [handleEdit]);
+  const callbackHandleList = useCallback(() => {
+    handleList();
+  }, [handleList]);
+  const callbackHandleNormalBidAccept = useCallback(() => {
+    handleNormalBidAccept();
+  }, [handleNormalBidAccept]);
+  const callbackHandlePrivateBidAccept = useCallback(() => {
+    handlePrivateBidAccept();
+  }, [handlePrivateBidAccept]);
+
+  if (firstLoading) {
+    setTimeout(() => {
+      if (cta === 'edit') callbackHandleEdit();
+      else if (cta === 'list') callbackHandleList();
+      else if (cta === 'accept_bid') callbackHandleNormalBidAccept();
+      else if (cta === 'accept_otc_bid') callbackHandlePrivateBidAccept();
+    }, 1000);
+
+    firstLoading = false;
+  }
 
   return (
     <Box sx={isMobile || isTablet ? buttonBoxMobile : buttonBox}>
@@ -836,71 +960,38 @@ const OwnerButtons = (props: OwnerButtonProps) => {
             {(lastBid as any)?.price &&
               (lastBid as any)?.bidder !== ethers.constants.AddressZero &&
               ((isMobile && activeTab === 1) ||
-                (!isMobile && activeTab === 0)) && (
+                (!isMobile && activeTab === 0)) &&
+              user?.address && (
                 <Button
                   ref={acceptBidButtonRef}
-                  variant="nft_primary"
+                  variant="contained"
+                  fullWidth
                   disabled={showAcceptModel}
-                  onClick={() => {
-                    if (!user?.address) {
-                      showModal(MODAL_TYPES.CONNECT_WALLET, {
-                        title: 'Create instance form',
-                        confirmBtn: 'Save',
-                      });
-                    } else {
-                      setOpenType('purchase');
-                      handleAcceptBid(bidType.DEFAULT);
-                    }
-                  }}
+                  onClick={handleNormalBidAccept}
                 >
                   <Typography variant="lbl-md">
                     {' '}
                     Accept Bid for{' '}
-                    {formatDecimals((lastBid as any)?.price, 18, true)}{' '}
-                    {Number(acceptBidData.paymentType) === 0 ? 'AVAX' : 'THOR'}{' '}
+                    {formatDecimals(
+                      (lastBid as any)?.price,
+                      Number(acceptBidData?.paymentType) === 2 ? 6 : 18,
+                      true
+                    )}{' '}
+                    {Number(acceptBidData?.paymentType) === 0
+                      ? 'AVAX'
+                      : Number(acceptBidData?.paymentType) === 1
+                      ? 'THOR'
+                      : 'USD'}{' '}
                   </Typography>
                 </Button>
               )}
-
-            <Button
-              ref={unListButtonRef}
-              variant="nft_outlined"
-              disabled={unListNFTLoading}
-              onClick={() => {
-                if (!user?.address) {
-                  showModal(MODAL_TYPES.CONNECT_WALLET, {
-                    title: 'Create instance form',
-                    confirmBtn: 'Save',
-                  });
-                } else {
-                  // setOpenType('purchase');
-                  handleUnlistNFT();
-                }
-              }}
-            >
-              {/* {unListNFTLoading ? (
-                <CircularProgress size="2.5rem" sx={{ color: 'white' }} />
-              ) : ( */}
-              <Typography variant="lbl-md">Unlist NFT</Typography>
-              {/* )} */}
-            </Button>
-            {/* <Box>
-            <Typography sx={priceText}>
-              {formatNumber(listingUSD)} USD
-            </Typography>
-          </Box> */}
-          </Box>
-        </Box>
-      ) : (
-        <>
-          {(lastOtcBid as any)?.price &&
-            (lastOtcBid as any)?.bidder !== ethers.constants.AddressZero &&
-            ((isMobile && activeTab === 1) ||
-              (!isMobile && activeTab === 0)) && (
+            {user?.address && (
               <Button
-                ref={acceptPrivateBidButtonRef}
-                variant="nft_primary"
-                disabled={showAcceptModel}
+                ref={unListButtonRef}
+                variant={'outlined'}
+                color={'secondary'}
+                fullWidth
+                disabled={unListNFTLoading}
                 onClick={() => {
                   if (!user?.address) {
                     showModal(MODAL_TYPES.CONNECT_WALLET, {
@@ -908,10 +999,44 @@ const OwnerButtons = (props: OwnerButtonProps) => {
                       confirmBtn: 'Save',
                     });
                   } else {
-                    setOpenType('purchase');
-                    handleAcceptBid(bidType.OTC);
+                    // setOpenType('purchase');
+                    handleUnlistNFT();
                   }
                 }}
+              >
+                {/* {unListNFTLoading ? (
+                <CircularProgress size="2.5rem" sx={{ color: 'white' }} />
+              ) : ( */}
+                <Typography variant="lbl-md">Unlist NFT</Typography>
+                {/* )} */}
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              fullWidth
+              disabled={unListNFTLoading}
+              onClick={handleEdit}
+            >
+              {/* {unListNFTLoading ? (
+                <CircularProgress size="2.5rem" sx={{ color: 'white' }} />
+              ) : ( */}
+              <Typography variant="lbl-md">Edit</Typography>
+              {/* )} */}
+            </Button>
+          </Box>
+        </Box>
+      ) : (
+        <>
+          {(lastOtcBid as any)?.price &&
+            (lastOtcBid as any)?.bidder !== ethers.constants.AddressZero &&
+            ((isMobile && activeTab === 1) || (!isMobile && activeTab === 0)) &&
+            user?.address && (
+              <Button
+                ref={acceptPrivateBidButtonRef}
+                variant="contained"
+                fullWidth
+                disabled={showAcceptModel}
+                onClick={handlePrivateBidAccept}
               >
                 <Typography variant="lbl-md">
                   {' '}
@@ -919,21 +1044,12 @@ const OwnerButtons = (props: OwnerButtonProps) => {
                 </Typography>
               </Button>
             )}
-          {(!listing || (listing && isInvalidOwner)) && (
+          {(!listing || (listing && isInvalidOwner)) && user?.address && (
             <Button
               ref={listButtonRef}
-              variant="nft_primary"
-              // sx={btn1}
-              onClick={() => {
-                if (!user?.address) {
-                  showModal(MODAL_TYPES.CONNECT_WALLET, {
-                    title: 'Create instance form',
-                    confirmBtn: 'Save',
-                  });
-                } else {
-                  setShowListModal(!showListModal);
-                }
-              }}
+              variant={'contained'}
+              fullWidth
+              onClick={handleList}
             >
               <Typography variant="lbl-md">List for Sale</Typography>
             </Button>
@@ -945,7 +1061,9 @@ const OwnerButtons = (props: OwnerButtonProps) => {
           <Tooltip title="This listing was expired">
             <Button
               ref={unListButtonRef2}
-              variant="nft_outlined"
+              variant={'outlined'}
+              color={'secondary'}
+              fullWidth
               disabled={unListNFTLoading}
               onClick={() => {
                 if (!user?.address) {
@@ -966,11 +1084,6 @@ const OwnerButtons = (props: OwnerButtonProps) => {
               {/* )} */}
             </Button>
           </Tooltip>
-          {/* <Box>
-            <Typography sx={priceText}>
-              {formatNumber(listingUSD)} USD
-            </Typography>
-          </Box> */}
         </React.Fragment>
       )}
       <AcceptBid
@@ -980,6 +1093,13 @@ const OwnerButtons = (props: OwnerButtonProps) => {
         acceptBidType={acceptBidType}
         nftData={nftData}
         acceptBidResponse={acceptBidResponse}
+      />
+      <UpdateListNft
+        open={showEditModal}
+        listNFT={listNFT}
+        handleClose={handleModalClick}
+        // openToast={openToast}
+        // refetches={refetches}
       />
     </Box>
   );
@@ -992,56 +1112,52 @@ const NFTdetailV2 = () => {
   const router = useRouter();
   const marketplaceAddress = useMarketplaceAddress();
   const chain = useChain();
-  // const pathname = router.query.id;
-  const { address, id } = router.query;
+  const dispatch = useDispatch();
+  const { address, id, cta } = router.query;
   const collectionAddress = useMemo(() => '' + address, [address]);
   const nftId = useMemo(() => '' + id, [id]);
-  // const [dataid] = useState(0);
   const [loading] = useState(false);
-  const user = useSelector((state: any) => state.auth.user);
-  // const data = useSelector((state: any) => state.dummy.data);
+  const user = useSelector((state: any) => state?.auth.user);
   const [isOpen, setIsOpen] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
   const [openType, setOpenType] = React.useState('bid');
   const [openSnack, setOpenSnack] = React.useState(false);
   const [openSnackSuccess, setOpenSnackSuccess] = React.useState(false);
-  const [seeall, setseeall] = React.useState(false);
-  const [tab, settab] = React.useState(0);
+  const [seeAll, setSeeAll] = React.useState(false);
+  const [tab, setTab] = React.useState(0);
   const [priceSort, setPriceSort] = React.useState(true); // true => asc , false => desc
   const [otcPriceSort, setOtcPriceSort] = React.useState(true); // true => asc , false => desc
-  // const [isExpired, setIsExpired] = useState<boolean>(false);
   const isExpired = false;
   const [isInvalidOwner, setIsInvalidOwner] = useState<boolean>(false);
   const { showModal } = useGlobalModalContext();
   const [isLiked, setIsLiked] = useState(false);
 
   const isNode = isNodeNFT(collectionAddress, chain);
-  const { data: nftOwner, refetch: nftOwnerRefetch } = useGetNFTOwner(
-    collectionAddress,
-    Number(nftId)
-  );
+  const isPerk = useIsPerk(collectionAddress, chain);
+  const { data: nftOwner } = useGetNFTOwner(collectionAddress, Number(nftId));
   const { data } = useGetNFTDetail(collectionAddress, nftId);
-
-  // const [, setNextCollectionAddress] = useState('');
+  const { data: perkData } = useGetPerk(isPerk ? Number(id) : -1);
   const [currentCollection, setCurrentCollection] = useState<Collection>({});
   const [listing, setListing] = useState();
   const { data: listingData, refetch: refetchListing } = useGetListingByNft(
     collectionAddress,
     Number(nftId)
   );
+
+  const { refetch: refetchFavorates } = useGetNFTsFavrt(user?.id);
+
+  const { data: NFTListInfo } = useGetNFTsListed(collectionAddress, [nftId]);
   useEffect(() => {
-    if (!listingData) return;
+    if (nftOwner === '0x000000000000000000000000000000000000dEaD')
+      setIsInvalidOwner(true);
+    if (!listingData || !NFTListInfo) return;
+    if (!(NFTListInfo as any[])[0]?.isListed) return;
 
-    const listing = listingData.data.data.listings[0];
-    setListing(listing);
-
+    const length = listingData?.data?.data?.listings.length;
+    const listing = listingData?.data?.data?.listings[length - 1];
     if (!listing) return;
-
-    // setIsExpired(
-    //   listing.expiredAt && Number(listing.expiredAt) < Date.now() / 1000
-    // );
-    setIsInvalidOwner(!!listing.isInvalidOwner);
-  }, [listingData]);
+    setListing(listing);
+    setIsInvalidOwner(!!listing?.isInvalidOwner);
+  }, [listingData, NFTListInfo, nftOwner]);
 
   const [showListModal, setShowListModal] = useState(false);
   const [activeBidType, setActiveBidType] = useState(bidType.DEFAULT);
@@ -1065,74 +1181,183 @@ const NFTdetailV2 = () => {
     Number(nftId)
   );
 
-  const { data: publicUser, isLoading: pulicUserDataLoading } =
+  const { data: tokenURI } = useGetTokenURI(collectionAddress, Number(nftId));
+
+  const metadata = useMemo(
+    () => getJsonFromURI(tokenURI as string),
+    [tokenURI]
+  );
+
+  const nftImage = useMemo(() => {
+    if (metadata && isNode) {
+      const img = metadata?.image;
+      if (img) {
+        const array = img.split('//');
+        return 'https://ipfs.io/ipfs/' + array[1];
+      }
+      return '/images/nft-placeholder.png';
+    }
+    return '/images/nft-placeholder.png';
+  }, [metadata, isNode]);
+
+  const { data: publicUser, isLoading: publicUserDataLoading } =
     useGetUserByAddress(_nftOwner);
 
   const handleModalClick = () => {
     setShowListModal(!showListModal);
   };
-  const ListModalResponse = ({ isSuccess }: any) => {
-    if (isSuccess) {
-      nftOwnerRefetch();
+
+  const nftData = useMemo<NftDataType>(() => {
+    if (isNode) {
+      return {
+        nftName: metadata?.name || '',
+        by: 'Thorfi',
+        nftImage: nftImage,
+        nftAddress: collectionAddress,
+        tokenId: nftId,
+        nftDescription: metadata?.description || '',
+        nftAttributes: metadata?.attributes,
+      };
+    } else {
+      return {
+        nftName: getMetaDataName(data) || '',
+        by: 'Thorfi',
+        nftImage: getMetaData(data),
+        nftAddress: collectionAddress,
+        tokenId: nftId,
+        nftDescription: getMetaDataDescription(data) || '',
+        nftAttributes: getMetaDataAttributes(data),
+      };
     }
-  };
-  const nftData: NftDataType = {
-    nftName: getMetaDataName(data) || '',
-    by: 'Thorfi',
-    nftImage: getMetaData(data),
-    nftAddress: collectionAddress,
-    tokenId: nftId,
-    nftDescription: getMetaDataDescription(data) || '',
-    nftAttributes: getMetaDataAttributes(data),
-  };
+  }, [metadata, data, isNode, collectionAddress, nftId, nftImage]);
+
+  const nftInfor = useMemo(() => {
+    return [
+      {
+        image: isNode ? nftImage : getMetaData(data),
+        name: isNode ? metadata?.name : getMetaDataName(data),
+        token_address: collectionAddress,
+        token_id: nftId,
+      },
+    ];
+  }, [collectionAddress, data, isNode, metadata?.name, nftId, nftImage]);
+
+  const OGNodesContracts = getOGNodeContractByChain(chain);
+  const isOG = Object.values(OGNodesContracts).includes(
+    collectionAddress.toLowerCase()
+  );
+  const { data: _activePerks } = useGetActivePerks(
+    collectionAddress,
+    nftId,
+    isOG
+  );
+
+  const {
+    data: baseAcceptPayments,
+    isError: fetchingError,
+  }: { data: any[]; isError: boolean } = useGetAcceptPaymentsByNFT(
+    collectionAddress,
+    nftId
+  );
+
+  const acceptPayments = useMemo(() => {
+    let value = ['0', '0', '0'];
+    if (baseAcceptPayments && listing && !fetchingError) {
+      const filteredArr = baseAcceptPayments.filter(
+        (element) => element === null
+      );
+      if (filteredArr.length === 3) {
+        value[Number((listing as any)?.paymentType)] = (
+          listing as any
+        )?.priceInWei;
+      } else {
+        value = baseAcceptPayments.map((element) => {
+          return element ? element.toString() : '0';
+        });
+      }
+    }
+    return value;
+  }, [baseAcceptPayments, listing, fetchingError]);
+
+  const activePerks = useMemo(() => {
+    if (!_activePerks) return [];
+    let result: any[] = [];
+    (_activePerks as any[])
+      .filter(
+        (perk: any) =>
+          perk &&
+          (perk?.pct.toString() === '5000' || perk?.pct.toString() === '3500')
+      )
+      .sort((a: any, b: any) =>
+        moment
+          .duration(moment(a?.endTime.toNumber() * 1000).diff(moment()))
+          .asDays() >
+        moment
+          .duration(moment(b?.endTime.toNumber() * 1000).diff(moment()))
+          .asDays()
+          ? -1
+          : 1
+      )
+      .map((perk: any) => {
+        const days = moment
+          .duration(moment(perk?.endTime.toNumber() * 1000).diff(moment()))
+          .asDays();
+        if (days > 0) {
+          result.push(days.toFixed(0) + ' DAYS');
+        } else {
+          result = ['INACTIVE'];
+        }
+      });
+    return result;
+  }, [_activePerks]);
   const { data: thorPrice } = useGetUsdFromThor('1', chain);
   const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
   const listingUSD = useMemo(() => {
     if (listing && (listing as any).priceInWei) {
-      return (
-        Number(ethers.utils.formatEther((listing as any)?.priceInWei)) *
-        ((listing as any)?.paymentType === '0'
-          ? avaxPrice
-            ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
-            : 0
-          : thorPrice
-          ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-          : 0)
+      return formatPriceByDefaultCurrency(
+        (listing as any)?.priceInWei,
+        (listing as any)?.paymentType,
+        user?.default_currency,
+        avaxPrice,
+        thorPrice
       );
     } else {
       return 0;
     }
-  }, [thorPrice, avaxPrice, listing]);
+  }, [thorPrice, avaxPrice, listing, user?.default_currency]);
+  const handleLikeNFT = () => {
+    if (user?.address) {
+      axios
+        .post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/favs/like-unsynced`, {
+          user_id: user?.id,
+          chainid: chain?.id,
+          collection_address: collectionAddress,
+          token_id: nftId,
+        })
+        .then((res) => {
+          if (res?.data.code === 200) {
+            setIsLiked(!isLiked);
+            refetchFavorates();
+          }
+        });
+    } else {
+      showModal(MODAL_TYPES.CONNECT_WALLET, {
+        title: 'Create instance form',
+        confirmBtn: 'Save',
+      });
+    }
+  };
+
   useEffect(() => {
     if (chain?.id && collectionAddress) {
-      // collectionsService
-      //   .getNextCollection('' + collectionAddress)
-      //   .then((res) => {
-      //     if (res.data.data) {
-      //       setNextCollectionAddress(res.data.data.address);
-      //     } else {
-      //       collectionsService.getNextCollection('0').then((res) => {
-      //         if (res.data.data) {
-      //           setNextCollectionAddress(res.data.data.address);
-      //         } else {
-      //           setNextCollectionAddress('');
-      //         }
-      //       });
-      //     }
-      //   });
       collectionsService
-        .getCollectionByAddress('' + collectionAddress, chain.id)
+        .getCollectionByAddress('' + collectionAddress, chain?.id)
         .then((res) => {
-          setCurrentCollection(res.data.data);
+          setCurrentCollection(res?.data?.data);
         });
     }
   }, [collectionAddress, chain]);
-  // console.log(currentCollection);
-  // const moveToNextCollection = () => {
-  //   if (nextCollectionAddress) {
-  //     window.location.href = `/nft/${nextCollectionAddress}/1`; // router.push(...) doesn't work
-  //   }
-  // };
+
   useEffect(() => {
     if (chain && user?.id && collectionAddress && nftId)
       axios
@@ -1140,27 +1365,12 @@ const NFTdetailV2 = () => {
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/favs/is-liked-unsynced/${chain?.id}/${user?.id}/${collectionAddress}/${nftId}`
         )
         .then((res) => {
-          if (res.data.code === 200) {
-            setIsLiked(res.data.data.liked ? true : false);
+          if (res?.data?.code === 200) {
+            setIsLiked(res?.data.data.liked ? true : false);
           }
-          console.log(res);
         });
   }, [nftId, chain, user, collectionAddress]);
-  const likeNFT = (collectionAddr: string, nftId: string) => {
-    axios
-      .post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/favs/like-unsynced`, {
-        user_id: user?.id,
-        chainid: chain?.id,
-        collection_address: collectionAddr,
-        token_id: nftId,
-      })
-      .then((res) => {
-        if (res.data.code === 200) {
-          setIsLiked(!isLiked);
-          console.log(res.data);
-        }
-      });
-  };
+
   const backMobileButtonRef = useSetAttribute([
     { key: 'id', value: 'back-mobile-button' },
     { key: 'dusk', value: 'back-mobile-button' },
@@ -1200,16 +1410,21 @@ const NFTdetailV2 = () => {
     if (_bids && _bids?.length) {
       _bids.map((_bid: any) =>
         data.push({
-          user: dottedAddress(_bid.bidder),
-          fulladdress: _bid.bidder,
-          price: ethers.utils.formatEther(_bid.priceInWei),
+          user: dottedAddress(_bid?.bidder),
+          fulladdress: _bid?.bidder,
+          price: ethers.utils.formatUnits(
+            _bid?.priceInWei,
+            Number(_bid?.paymentType) === 2 ? 6 : 18
+          ),
           userImage: '/images/userBidAvatar.png',
-          bidPlacedAt: formattedTime(_bid.blockTimestamp),
-          expiresAt: _bid.expiresAt,
-          paymentType: _bid.paymentType,
+          bidPlacedAt: formattedTime(_bid?.blockTimestamp),
+          expiresAt: _bid?.expiresAt,
+          paymentType: _bid?.paymentType,
           isExpired:
             Math.ceil(Number((new Date() as any) / 1000)) >
-            Number(_bids[0].blockTimestamp) + Number(_bids[0].expiresAt) / 1000,
+            (Number(_bid.expiredAt) <= 1814400
+              ? Number(_bid.expiresAt)
+              : Number(_bid.expiredAt)),
         })
       );
     }
@@ -1223,12 +1438,18 @@ const NFTdetailV2 = () => {
     if (_otcBids && _otcBids?.length) {
       _otcBids.map((_bid: any) =>
         data.push({
-          user: dottedAddress(_bid.bidder),
-          fulladdress: _bid.bidder,
-          price: ethers.utils.formatEther(_bid.priceInWei),
+          user: dottedAddress(_bid?.bidder),
+          fulladdress: _bid?.bidder,
+          price: ethers.utils.formatEther(_bid?.priceInWei),
           userImage: '/images/userBidAvatar.png',
-          bidPlacedAt: formattedTime(_bid.blockTimestamp),
-          paymentType: _bid.paymentType,
+          bidPlacedAt: formattedTime(_bid?.blockTimestamp),
+          expiresAt: _bid?.expiresAt,
+          paymentType: _bid?.paymentType,
+          isExpired:
+            Math.ceil(Number((new Date() as any) / 1000)) >
+            (Number(_bid.expiredAt) <= 1814400
+              ? Number(_bid.expiresAt)
+              : Number(_bid.expiredAt)),
         })
       );
     }
@@ -1241,30 +1462,15 @@ const NFTdetailV2 = () => {
     );
   }, [_nftOwner, user]);
 
-  // const isOldOwner = useMemo(() => {
-  //   return (
-  //     (listing as any)?.isInvalidOwner &&
-  //     user?.address?.toLowerCase() ===
-  //       (listing as any)?.sellerAddress?.toLowerCase()
-  //   );
-  // }, [listing, user]);
-
   const placingBid = (val: boolean) => {
     setOpenSnack(val);
   };
 
-  const openToast = () => {
-    setOpenSnack(true);
-    setTimeout(() => {
-      setOpenSnackSuccess(true);
-    }, 2000);
-  };
   const closeSnackbar = () => {
     setOpenSnack(false);
   };
 
   const handleClose = () => {
-    setOpen(false);
     setIsOpen(false);
   };
   const closeSnackbarSuccess = () => {
@@ -1289,775 +1495,1990 @@ const NFTdetailV2 = () => {
 
   const MaxStringLength = 120;
 
-  if (!isMobile && !isTablet) {
-    return (
-      <Box sx={{ alignItems: 'center', margin: 'auto', height: '92vh' }}>
+  useEffect(() => {
+    if (cta) {
+      setTimeout(() => {
+        if (user?.address && nftOwner && !isOwner) {
+          dispatch(
+            showToast({
+              message: 'This NFT is not owned by you anymore.',
+              severity: ToastSeverity.ERROR,
+              image: nftData?.nftImage,
+            })
+          );
+        }
+      }, 2000);
+    }
+  }, [cta, dispatch, nftOwner, isOwner, nftData?.nftImage, user?.address]);
+  return (
+    <Box>
+      {!isMobile && !isTablet ? (
         <Box
           sx={{
-            padding: '5px 20px',
+            alignItems: 'center',
+            margin: 'auto',
+            height: 'calc( 100vh - 49px)',
+            overflowY: 'auto',
           }}
         >
-          <Button ref={backButtonRef} onClick={() => router.back()}>
-            {' '}
-            <ArrowBackIos
-              sx={{ height: '1.2em', color: palette.secondary.storm[70] }}
-            />
-            <Typography
-              sx={{ mt: '5px', color: palette.secondary.storm[70] }}
-              variant="lbl-md"
-            >
-              {' '}
-              Back
-            </Typography>
-          </Button>
-        </Box>
-
-        <Grid container spacing={2}>
-          <Grid
-            item
-            miniMobile={12}
-            xs={12}
-            md={4}
-            padding={4}
-            sx={{ position: 'relative' }}
+          <Box
+            sx={{
+              padding: '5px 20px',
+            }}
           >
-            <Box sx={box1}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  flexDirection: 'column',
-                  paddingBottom: '10px',
-                }}
-              >
-                {loading ? (
-                  <CircularProgress />
-                ) : currentCollection?.profile_image ? (
-                  <Link href={`/collections/${currentCollection.address}`}>
-                    <img
-                      style={{ cursor: 'pointer' }}
-                      src={currentCollection?.profile_image}
-                      width="88px"
-                      height="88px"
-                    />
-                  </Link>
-                ) : (
-                  <img src={nftData?.nftImage} width="88px" height="88px" />
-                )}
-                {currentCollection?.name && (
-                  <Typography
-                    variant="h2"
+            <Button
+              color={'secondary'}
+              size={'small'}
+              ref={backButtonRef}
+              onClick={() => router.back()}
+            >
+              <ArrowBackIos />
+              Back
+            </Button>
+          </Box>
+
+          <Grid container spacing={2}>
+            <Grid
+              item
+              miniMobile={12}
+              xs={12}
+              md={5}
+              padding={4}
+              sx={{ position: 'relative' }}
+            >
+              <Box sx={box1}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Box
                     sx={{
-                      fontFamily: 'Nexa',
-                      fontSize: '14px',
-                      fontWeight: 400,
-                      lineHeight: '21.22px',
-                      letterSpacing: '0.04em',
-                      textAlign: 'left',
-                      paddingTop: '20px',
-                      color: palette.primary.storm,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      width: '100%',
+                      wordWrap: 'break-word',
                     }}
                   >
-                    {currentCollection?.name}
+                    <Typography sx={titleStyle}>
+                      {loading ? null : nftData?.nftName}
+                    </Typography>
+                  </Box>
+
+                  {currentCollection?.name && (
+                    <Box sx={{ display: 'flex' }}>
+                      {' '}
+                      <img
+                        width={'18.77px'}
+                        height={'18.77px'}
+                        src="/images/logo.svg"
+                      />
+                      <Link
+                        className="asdfsadfs"
+                        href={`/collection/${currentCollection?.address}`}
+                      >
+                        <Typography
+                          variant="h2"
+                          sx={{
+                            fontFamily: 'Nexa-Bold',
+                            fontSize: '18px',
+                            lineHeight: '21.22px',
+                            letterSpacing: '0.04em',
+                            textAlign: 'left',
+                            color: 'primary.main',
+                            ml: 1,
+                            cursor: `url("/images/cursor-pointer.svg"), auto`,
+                          }}
+                        >
+                          {currentCollection?.name}
+                        </Typography>
+                      </Link>
+                    </Box>
+                  )}
+
+                  <Typography
+                    className="colDetail"
+                    variant="p-md-bk"
+                    sx={{
+                      lineHeight: '24.26px',
+                      textOverflow: 'ellipsis',
+                      overflowY: seeAll ? 'visible' : 'hidden',
+                      pt: '10px',
+                    }}
+                  >
+                    {loading ? (
+                      <CircularProgress />
+                    ) : !seeAll ? (
+                      nftData?.nftDescription.substring(0, MaxStringLength)
+                    ) : (
+                      nftData?.nftDescription
+                    )}
+
+                    {nftData?.nftDescription.length > MaxStringLength && !seeAll
+                      ? '...'
+                      : ''}
                   </Typography>
+                </Box>
+                {nftData?.nftDescription.length > MaxStringLength && (
+                  <Box
+                    onClick={() => setSeeAll(!seeAll)}
+                    sx={{ pt: 1, display: 'flex' }}
+                  >
+                    <Typography
+                      variant="p-sm"
+                      sx={{
+                        fontWeight: '700',
+                        lineHeight: '18px',
+                        letterSpacing: '0.04em',
+                        textAlign: 'left',
+                        color: 'text.secondary',
+                        cursor: `url("/images/cursor-pointer.svg"), auto`,
+                      }}
+                    >
+                      SEE {!seeAll ? 'ALL' : 'LESS'}
+                      <img
+                        style={{
+                          marginLeft: 3,
+                          marginBottom: 1,
+                          transform: `rotate(${seeAll ? '180deg' : '0deg'})`,
+                        }}
+                        src="/images/showall.png"
+                        width="13px"
+                        height="7px"
+                      />
+                    </Typography>
+                  </Box>
                 )}
               </Box>
               <Box
                 sx={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  ml: 7,
+                  mt: 3,
                 }}
               >
-                <Box
+                <Box>
+                  <Typography variant="p-md-bk" sx={ownerText}>
+                    Current Owner
+                  </Typography>
+                  {user?.address && isOwner ? (
+                    <Box sx={imgStyle}>
+                      <Avatar
+                        alt="none"
+                        src="/images/Rectangle.png"
+                        sx={{
+                          width: '15px',
+                          height: '15px',
+                        }}
+                      />
+                      <Typography variant="lbl-md" sx={ownerDetail}>
+                        You are the owner
+                      </Typography>
+                    </Box>
+                  ) : !publicUserDataLoading ? (
+                    publicUser?.address ? (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          cursor: `url("/images/cursor-pointer.svg"), auto`,
+                        }}
+                      >
+                        <Avatar
+                          alt="none"
+                          src="/images/Rectangle.png"
+                          sx={{
+                            width: '15px',
+                            height: '15px',
+                          }}
+                        />
+                        <Link
+                          className="asdfsadfs"
+                          href={`/profile/${_nftOwner}`}
+                        >
+                          <Typography
+                            sx={{
+                              marginLeft: '10px',
+                              color: 'primary.main',
+                            }}
+                          >
+                            {_nftOwner ? dottedAddress(_nftOwner) : '...'}
+                          </Typography>
+                        </Link>
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          cursor: `url("/images/cursor-pointer.svg"), auto`,
+                        }}
+                      >
+                        <Avatar
+                          alt="none"
+                          src="/images/Rectangle.png"
+                          sx={{
+                            width: '15px',
+                            height: '15px',
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            marginLeft: '10px',
+                            color: 'primary.main',
+                          }}
+                        >
+                          {_nftOwner ? dottedAddress(_nftOwner) : '...'}
+                        </Typography>
+                      </Box>
+                    )
+                  ) : (
+                    ``
+                  )}
+                </Box>
+                {listing && !isInvalidOwner && (
+                  <Box sx={{ display: 'flex', flexDirection: 'row' }}>
+                    <Box>
+                      <Typography
+                        variant="lbl-md"
+                        sx={{ mb: '5px', color: 'text.secondary' }}
+                      >
+                        PRICE
+                      </Typography>
+                      <Typography
+                        variant="p-lg-bk"
+                        sx={{
+                          lineHeight: '24px',
+                        }}
+                      >
+                        {formatNumber(listingUSD)}{' '}
+                        {user?.default_currency
+                          ? user?.default_currency.replace('USDC', 'USD')
+                          : 'USD'}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        ml: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <Typography
+                        variant="lbl-md"
+                        sx={{ mb: '5px', color: 'text.secondary' }}
+                      >
+                        RECEIVE
+                      </Typography>
+                      <MultiCurrency
+                        nftAddress={collectionAddress}
+                        tokenId={nftId}
+                        paymentType={(listing as any)?.paymentType}
+                        priceWei={(listing as any)?.priceInWei}
+                      />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+              <Box
+                sx={{
+                  borderBottom: 1,
+                  borderColor: 'transparent',
+                  ml: { xs: 1.5, md: 6 },
+                  mt: 4,
+                  mb: -2,
+                }}
+              >
+                <StyledTabs
+                  sx={{ width: 'fit-content' }}
+                  value={tab}
+                  onChange={(e: any, n: number) => e && setTab(n)}
+                >
+                  <Tab label="ATTRIBUTES" ref={attributesButtonRef} />
+                  <Tab label="BIDS" ref={bidsButtonRef} />
+                  <Tab label="HISTORY" ref={privateBidsButtonRef} />
+                </StyledTabs>
+              </Box>
+              {tab === 1 ? (
+                <TableContainer
                   sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    width: '100%',
-                    wordWrap: 'break-word',
+                    // 'height': '320px',
+                    'margin-bottom': '50px',
+                    'width': '100%',
+                    'overflowY': 'scroll',
+                    'overflowX': 'hidden',
+                    '&::-webkit-scrollbar': {
+                      width: 0,
+                    },
+                    'borderColor': 'transparent',
+                    // background: 'green',
+                    'ml': 3,
+                    // pr: 2
                   }}
                 >
-                  <Typography sx={titlee}>
-                    {loading ? null : nftData?.nftName}
-                  </Typography>
-                </Box>
-
-                <Typography
-                  className="colDetail"
-                  variant="p-md-bk"
+                  <Table
+                    sx={{
+                      // 'ml': { xs: 1.5, md: 5.5 },
+                      '& .MuiTableCell-root': {
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                      },
+                      // background: 'red'
+                    }}
+                    stickyHeader
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+                            <Typography
+                              variant="lbl-sm"
+                              sx={{
+                                letterSpacing: '0em',
+                                textAlign: 'left',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              User
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'baseline',
+                            }}
+                          >
+                            <Button
+                              onClick={() => setPriceSort(!priceSort)}
+                              size={'small'}
+                              sx={{
+                                borderRadius: 0,
+                                textTransform: 'none',
+                                padding: '2px',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              <SortLabel
+                                text={'Price'}
+                                direction={priceSort ? 'asc' : 'desc'}
+                              />
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    {bidsInfo?.length && !isExpired && !isInvalidOwner ? (
+                      <TableBody>
+                        {getSortedBids().map((bid: any, _index: number) => (
+                          <TableRow key={_index}>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                }}
+                              >
+                                <img
+                                  src={bid?.userImage}
+                                  width="34"
+                                  height="34"
+                                />
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    pl: '20px',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="lbl-sm"
+                                    sx={{
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                    }}
+                                  >
+                                    {bid?.user}
+                                  </Typography>
+                                  <Typography
+                                    variant="lbl-md"
+                                    sx={{
+                                      fontWeight: 400,
+                                      lineHeight: '21px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    {bid?.bidPlacedAt}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {bid?.isExpired && (
+                                <Typography
+                                  sx={{
+                                    color: 'primary.main',
+                                  }}
+                                >
+                                  Expired
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-end',
+                                  pr: 2,
+                                }}
+                              >
+                                <Box sx={{ display: 'flex' }}>
+                                  <img
+                                    src={`/images/${
+                                      isNode
+                                        ? Number(bid?.paymentType) === 0
+                                          ? 'avax'
+                                          : Number(bid?.paymentType) === 1
+                                          ? 'thor'
+                                          : 'usdc'
+                                        : 'avax'
+                                    }Icon.svg`}
+                                    width="24"
+                                    height="20"
+                                  />
+                                  <Typography
+                                    variant="p-md-bk"
+                                    sx={{
+                                      lineHeight: '24px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'right',
+                                    }}
+                                  >
+                                    {bid?.price}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Box
+                            sx={(theme) => ({
+                              border: `1px dashed ${theme.palette.text.secondary}`,
+                              width: '100%',
+                              height: '40px',
+                              padding: '0!important',
+                              ml: 2,
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            })}
+                          >
+                            <Typography
+                              variant={'lbl-md'}
+                              sx={{
+                                color: 'text.secondary',
+                                textAlign: 'center',
+                              }}
+                            >
+                              No bids have been made
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Table>
+                </TableContainer>
+              ) : tab === 2 ? (
+                <TableContainer
                   sx={{
-                    lineHeight: '24.26px',
-                    textOverflow: 'ellipsis',
-                    overflowY: seeall ? 'visible' : 'hidden',
-                    color: palette.primary.storm,
+                    // 'height': '320px',
+                    'margin-bottom': '50px',
+                    'width': '100%',
+                    'overflowY': 'scroll',
+                    'overflowX': 'hidden',
+                    '&::-webkit-scrollbar': {
+                      width: 0,
+                    },
+                    'borderColor': 'transparent',
+                    // background: 'green',
+                    'ml': 3,
+                    // pr: 2
                   }}
-                  // height={seeall ? 'auto' : '77px'}
+                >
+                  <Table
+                    sx={{
+                      // 'ml': { xs: 1.5, md: 5.5 },
+                      '& .MuiTableCell-root': {
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                      },
+                      // background: 'red'
+                    }}
+                    stickyHeader
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+                            <Typography
+                              variant="lbl-sm"
+                              sx={{
+                                letterSpacing: '0em',
+                                textAlign: 'left',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              User
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'baseline',
+                            }}
+                          >
+                            <Button
+                              onClick={() => setOtcPriceSort(!otcPriceSort)}
+                              size={'small'}
+                              sx={{
+                                borderRadius: 0,
+                                textTransform: 'none',
+                                padding: '2px',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              <SortLabel
+                                text={'Price'}
+                                direction={otcPriceSort ? 'asc' : 'desc'}
+                              />
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    {otcBidsInfo?.length ? (
+                      <TableBody>
+                        {getSortedOtcBids().map((bid: any, _index: number) => (
+                          <TableRow key={_index}>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                }}
+                              >
+                                <img
+                                  src={bid?.userImage}
+                                  width="34"
+                                  height="34"
+                                />
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    pl: '20px',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="lbl-sm"
+                                    sx={{
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                    }}
+                                  >
+                                    {bid?.user}
+                                  </Typography>
+                                  <Typography
+                                    variant="lbl-md"
+                                    sx={{
+                                      fontWeight: 400,
+                                      lineHeight: '21px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    {bid?.bidPlacedAt}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {bid?.isExpired && (
+                                <Typography
+                                  sx={{
+                                    color: 'primary.main',
+                                  }}
+                                >
+                                  Expired
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-end',
+                                  pr: 2,
+                                }}
+                              >
+                                <Box sx={{ display: 'flex' }}>
+                                  <img
+                                    src="/images/avaxIcon.svg"
+                                    width="24"
+                                    height="20"
+                                  />
+                                  <Typography
+                                    variant="p-md-bk"
+                                    sx={{
+                                      lineHeight: '24px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'right',
+                                    }}
+                                  >
+                                    {bid?.price}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Box
+                            sx={(theme) => ({
+                              border: `1px dashed ${theme.palette.text.secondary}`,
+                              width: '100%',
+                              height: '40px',
+                              padding: '0!important',
+                              ml: 2,
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            })}
+                          >
+                            <Typography
+                              variant={'lbl-md'}
+                              sx={{
+                                color: 'text.secondary',
+                                textAlign: 'center',
+                              }}
+                            >
+                              No private bids have been made
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box
+                  sx={{
+                    maxHeight: '40%',
+                    overflowY: 'scroll',
+                    mb: '50px',
+                  }}
+                  className={styles.hideScroll}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      pl: 6,
+                      pt: 2,
+                      justifyContent: 'flex-start',
+                      flexWrap: 'wrap',
+                      // maxHeight: '40%',
+                      // overflowY: 'scroll',
+                    }}
+                  >
+                    {nftData?.nftAttributes &&
+                      nftData?.nftAttributes.map(
+                        (attribute: Attribute, _index: number) =>
+                          'attechedperks' !==
+                            attribute?.trait_type?.toLowerCase() &&
+                          'isodinkey' !==
+                            attribute?.trait_type?.toLowerCase() && (
+                            <Box
+                              key={_index}
+                              sx={(theme) => ({
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                border: '1px solid',
+                                borderColor: theme.palette.text.primary,
+                                justifyContent: 'space-between',
+                                padding: 1,
+                                margin: 1,
+                              })}
+                            >
+                              <Typography
+                                sx={{
+                                  color: 'text.secondary',
+                                  textTransform: 'uppercase',
+                                  lineHeight: '15px',
+                                }}
+                                variant="lbl-md"
+                              >
+                                {isNodeNFT(collectionAddress, chain) &&
+                                'rewards' ===
+                                  attribute?.trait_type?.toLowerCase()
+                                  ? 'Rewards (THOR)'
+                                  : 'due date' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? 'Due date (Days)'
+                                  : 'isdirectburnkey' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? 'Type'
+                                  : attribute.trait_type}
+                              </Typography>
+                              <Typography variant="p-lg-bk">
+                                {isNodeNFT(collectionAddress, chain) &&
+                                'rewards' ===
+                                  attribute?.trait_type?.toLowerCase()
+                                  ? formatDecimals(
+                                      attribute?.value.toString(),
+                                      18,
+                                      false,
+                                      6
+                                    )
+                                  : 'due date' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? moment
+                                      .duration(
+                                        moment(
+                                          parseInt(
+                                            attribute?.value.toString()
+                                          ) * 1000
+                                        ).diff(moment())
+                                      )
+                                      .asDays() >= 0
+                                    ? moment
+                                        .duration(
+                                          moment(
+                                            parseInt(
+                                              attribute?.value.toString()
+                                            ) * 1000
+                                          ).diff(moment())
+                                        )
+                                        .asDays()
+                                        .toFixed(0)
+                                    : 'Inactive'
+                                  : 'isdirectburnkey' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${attribute?.value ? 'Origin' : 'Drift'}`
+                                  : 'vrr multiplier' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${Number(attribute?.value) / 10}`
+                                  : 'voucher' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${formatDecimals(
+                                      attribute?.value.toString(),
+                                      18,
+                                      false,
+                                      0
+                                    )} THOR`
+                                  : `${attribute?.value}${
+                                      attribute?.display_type ===
+                                      'boost_percentage'
+                                        ? attribute?.trait_type.toLocaleLowerCase() ===
+                                          'temporary booster'
+                                          ? activePerks &&
+                                            activePerks.length !== 0
+                                            ? `% (${activePerks.join(',')})`
+                                            : `%`
+                                          : '%'
+                                        : ''
+                                    }`}
+                              </Typography>
+                            </Box>
+                          )
+                      )}
+                    {isPerk && perkData && (
+                      <Box
+                        sx={(theme) => ({
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          border: '1px solid',
+                          borderColor: theme.palette.text.primary,
+                          justifyContent: 'space-between',
+                          padding: 1,
+                          margin: 1,
+                        })}
+                      >
+                        <Typography
+                          sx={{
+                            color: 'text.secondary',
+                            textTransform: 'uppercase',
+                            lineHeight: '15px',
+                          }}
+                          variant="lbl-md"
+                        >
+                          Days
+                        </Typography>
+                        {(perkData as any).duration.toString() === '0' ? (
+                          <Typography
+                            sx={{
+                              fontSize: '30px',
+                              lineHeight: '18px',
+                            }}
+                            variant="p-lg-bk"
+                          >
+                            &infin;
+                          </Typography>
+                        ) : (
+                          <Typography variant="p-lg-bk">30</Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              )}
+              {isOwner ? (
+                <>
+                  <OwnerButtons
+                    user={user}
+                    setOpenType={setOpenType}
+                    showModal={showModal}
+                    setIsOpen={setIsOpen}
+                    listing={listing}
+                    isExpired={isExpired}
+                    isInvalidOwner={isInvalidOwner}
+                    collectionAddress={collectionAddress}
+                    tokenId={Number(nftId)}
+                    showListModal={showListModal}
+                    setShowListModal={handleModalClick}
+                    activeTab={tab}
+                    refetchListing={refetchListing}
+                    nftData={nftData}
+                    cta={cta}
+                  />
+                </>
+              ) : (
+                <BuyerButtons
+                  user={user}
+                  setOpenType={setOpenType}
+                  showModal={showModal}
+                  setIsOpen={setIsOpen}
+                  listing={listing}
+                  isExpired={isExpired}
+                  isInvalidOwner={isInvalidOwner}
+                  collectionAddress={collectionAddress}
+                  tokenId={Number(nftId)}
+                  setActiveBidType={setActiveBidType}
+                  isPrivate={tab === 2}
+                  isNormal={tab === 1}
+                  nftData={nftData}
+                />
+              )}
+            </Grid>
+            <Grid
+              item
+              miniMobile={12}
+              md={7}
+              mt={10}
+              sx={{
+                '&.MuiGrid-item': { padding: '0px' },
+                'display': 'flex',
+                'justifyContent': 'center',
+              }}
+            >
+              <Box
+                sx={{
+                  height: {
+                    lg: '580px',
+                    sm: '500px',
+                    miniMobile: '343px',
+                  },
+                  marginLeft: '50px',
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  style={{
+                    aspectRatio: '1',
+                    width: '35vw',
+                    backgroundImage: `url(${nftData?.nftImage}), url(${
+                      'https://d3nzng6t9rclwr.cloudfront.net/collections/chain_' +
+                      chain.id +
+                      '/collection_' +
+                      nftData?.nftAddress +
+                      '/images/' +
+                      nftData?.tokenId +
+                      '.jpg'
+                    })`, // THis is the what you want, I guess
+                    position: 'relative',
+                    transitionDuration: '0.1s',
+                    zIndex: 2,
+                    maxWidth: 'auto',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                  }}
+                >
+                  {user?.address ? (
+                    <Box position="absolute" top="18.7px" right="18.7px">
+                      <IconButton
+                        sx={{
+                          'width': '32px',
+                          'height': '32px',
+                          'backgroundColor': 'rgba(256, 256, 256, 0.6)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(256, 256, 256, 0.6)',
+                          },
+                        }}
+                        onClick={handleLikeNFT}
+                        size={'small'}
+                        className={'action-button'}
+                      >
+                        {isLiked ? (
+                          <FavoriteIcon color="primary" />
+                        ) : (
+                          <FavoriteBorderIcon color={'primary'} />
+                        )}
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <div></div>
+                  )}
+                </Paper>
+              </Box>
+            </Grid>
+            <Snackbar
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={openSnack}
+              autoHideDuration={1800}
+              onClose={closeSnackbar}
+            >
+              <Box
+                sx={{
+                  'display': 'flex',
+                  'alignItems': 'center',
+                  '& .MuiAlert-root': {
+                    display: 'flex',
+                    alignItems: 'center',
+                  },
+                }}
+              >
+                <Alert
+                  icon={
+                    <Image width={40} height={40} src="/images/nftImage.png" />
+                  }
+                  severity="success"
+                  sx={{
+                    'width': '100%',
+                    'padding': '0px 32px 0px 0px',
+                    'background': 'black',
+                    '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
+                    '& .MuiButtonBase-root-MuiIconButton-root': {
+                      display: 'none',
+                    },
+                  }}
+                >
+                  <Typography variant="p-md-bk">
+                    {openType === 'bid'
+                      ? 'PLACING A BID...'
+                      : 'PROCESSING PURCHASE...'}
+                  </Typography>
+                </Alert>
+              </Box>
+            </Snackbar>
+            <Snackbar
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={openSnackSuccess}
+              autoHideDuration={9000}
+              onClose={closeSnackbarSuccess}
+            >
+              <Box
+                sx={{
+                  'display': 'flex',
+                  'alignItems': 'center',
+                  '& .MuiAlert-root': {
+                    display: 'flex',
+                    alignItems: 'center',
+                  },
+                }}
+              >
+                <Alert
+                  icon={
+                    <Image width={40} height={40} src="/images/nftImage.png" />
+                  }
+                  severity="success"
+                  sx={{
+                    'width': '100%',
+                    'padding': '0px 16px 0px 0px',
+                    'bgcolor': 'success.main',
+                    'marginLeft': '4px',
+
+                    '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
+                    '& .css-1e0d89p-MuiButtonBase-root-MuiIconButton-root': {
+                      display: 'none',
+                    },
+                  }}
+                >
+                  <Box
+                    style={{
+                      display: 'flex',
+                      justifyItems: 'center',
+                      paddingRight: '10px',
+                    }}
+                  >
+                    <Typography variant="p-md" sx={{ marginTop: '4px' }}>
+                      {openType === 'bid'
+                        ? 'VIEW RECENT BID'
+                        : 'VIEW MY NEW NFT'}
+                    </Typography>
+                    <ArrowForwardIos
+                      fontSize="small"
+                      style={{ color: 'white', marginLeft: '8px' }}
+                    />
+                  </Box>
+                </Alert>
+              </Box>
+            </Snackbar>
+          </Grid>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            alignItems: 'center',
+            margin: 'auto',
+            marginLeft: 'auto',
+            width: '100%',
+            overflowY: 'auto',
+          }}
+        >
+          <Box
+            sx={{
+              padding: '5px 20px',
+            }}
+          >
+            <Button
+              color={'secondary'}
+              size={'small'}
+              ref={backMobileButtonRef}
+              onClick={() => router.back()}
+            >
+              <ArrowBackIos />
+              Back
+            </Button>
+          </Box>
+          <Grid container spacing={0}>
+            <Grid
+              item
+              miniMobile={12}
+              xs={12}
+              md={12}
+              padding={2}
+              sx={{ ml: 'auto', mr: 'auto' }}
+            >
+              <Box sx={box1}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexDirection: 'column',
+                    paddingBottom: '10px',
+                  }}
                 >
                   {loading ? (
                     <CircularProgress />
-                  ) : !seeall ? (
-                    nftData?.nftDescription.substring(0, MaxStringLength)
+                  ) : nftData?.nftImage ? (
+                    <Grid
+                      item
+                      miniMobile={12}
+                      md={6}
+                      sx={{
+                        '&.MuiGrid-item': { padding: '0px' },
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          height: {
+                            lg: '580px',
+                            sm: '500px',
+                            miniMobile: '343px',
+                          },
+                        }}
+                      >
+                        <Paper
+                          elevation={0}
+                          style={{
+                            aspectRatio: '1',
+                            height: '100%',
+                            backgroundImage: `url(${nftData?.nftImage})`, // THis is the what you want, I guess
+                            position: 'relative',
+                            transitionDuration: '0.1s',
+                            zIndex: 2,
+                            maxWidth: 'auto',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                          }}
+                        >
+                          {user?.address ? (
+                            <Box
+                              position="absolute"
+                              top="18.7px"
+                              right="18.7px"
+                            >
+                              <IconButton
+                                sx={{
+                                  'width': '32px',
+                                  'height': '32px',
+                                  'backgroundColor': 'rgba(256, 256, 256, 0.6)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(256, 256, 256, 0.6)',
+                                  },
+                                }}
+                                onClick={handleLikeNFT}
+                                size={'small'}
+                                className={'action-button'}
+                              >
+                                {isLiked ? (
+                                  <FavoriteIcon color="primary" />
+                                ) : (
+                                  <FavoriteBorderIcon color={'primary'} />
+                                )}
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <div></div>
+                          )}
+                        </Paper>
+                      </Box>
+                    </Grid>
                   ) : (
-                    nftData?.nftDescription
+                    <Link href={`/collections/${currentCollection?.address}`}>
+                      <img
+                        style={{
+                          cursor: `url("/images/cursor-pointer.svg"), auto`,
+                        }}
+                        src={currentCollection?.profile_image}
+                        width="100%"
+                        height="100%"
+                      />
+                    </Link>
                   )}
+                </Box>
 
-                  {nftData?.nftDescription.length > MaxStringLength && !seeall
-                    ? '...'
-                    : ''}
-                </Typography>
-              </Box>
-              {nftData?.nftDescription.length > MaxStringLength && (
                 <Box
-                  onClick={() => setseeall(!seeall)}
-                  sx={{ pt: 1, display: 'flex' }}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'flex-start',
+                  }}
                 >
+                  <Typography sx={titleStyle}>
+                    {loading ? null : nftData?.nftName}
+                  </Typography>
+                  {currentCollection?.name && (
+                    <Box sx={{ display: 'flex' }}>
+                      {' '}
+                      <img
+                        width={'18.77px'}
+                        height={'18.77px'}
+                        src="/images/logo.svg"
+                      />
+                      <Link
+                        className="asdfsadfs"
+                        href={`/collection/${currentCollection?.address}`}
+                      >
+                        <Typography
+                          variant="h2"
+                          sx={{
+                            fontFamily: 'Nexa-Bold',
+                            fontSize: '18px',
+                            lineHeight: '21.22px',
+                            letterSpacing: '0.04em',
+                            textAlign: 'left',
+                            color: 'primary.main',
+                            ml: 1,
+                          }}
+                        >
+                          {currentCollection?.name}
+                        </Typography>
+                      </Link>
+                    </Box>
+                  )}
                   <Typography
-                    variant="p-sm"
+                    className="colDetail"
+                    variant="p-lg-bk"
                     sx={{
-                      fontWeight: '700',
-                      lineHeight: '18px',
-                      letterSpacing: '0.04em',
-                      textAlign: 'left',
-                      color: '#00000066',
+                      lineHeight: '27.29px',
+                      // textAlign: 'left',
+                      textOverflow: 'ellipsis',
+                      // overflowX: 'auto',
+                      overflowY: seeAll ? 'visible' : 'hidden',
+                      height: '100%',
+                      mt: 2,
+                    }}
+                    height={
+                      seeAll
+                        ? 'auto'
+                        : nftData?.nftDescription || nftData?.nftName
+                        ? '7px'
+                        : '0px'
+                    }
+                  >
+                    {loading ? (
+                      <CircularProgress />
+                    ) : !seeAll ? (
+                      nftData?.nftDescription.substring(0, MaxStringLength)
+                    ) : (
+                      nftData?.nftDescription
+                    )}
+
+                    {nftData?.nftDescription.length > MaxStringLength && !seeAll
+                      ? '...'
+                      : ''}
+                  </Typography>
+                </Box>
+                {nftData?.nftDescription.length > MaxStringLength && (
+                  <Box
+                    onClick={() => setSeeAll(!seeAll)}
+                    sx={{ pt: 1, display: 'flex' }}
+                  >
+                    <Typography
+                      variant="p-sm"
+                      sx={{
+                        fontWeight: '700',
+                        lineHeight: '18px',
+                        letterSpacing: '0.04em',
+                        textAlign: 'left',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      SEE {!seeAll ? 'ALL' : 'LESS'}
+                      <img
+                        style={{
+                          marginLeft: 3,
+                          marginBottom: 1,
+                          transform: `rotate(${seeAll ? '180deg' : '0deg'})`,
+                        }}
+                        src="/images/showall.png"
+                        width="13px"
+                        height="7px"
+                      />
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  ml: 1.5,
+                  mt: 2,
+                }}
+              >
+                <Box>
+                  <Typography variant="p-md-bk" sx={ownerText}>
+                    Current Owner
+                  </Typography>
+                  <Box sx={imgStyle}>
+                    <img
+                      src="/images/Rectangle.png"
+                      width="15px"
+                      height="15px"
+                    />
+                    {user?.address && isOwner ? (
+                      <Typography variant="p-lg" sx={ownerDetail}>
+                        You are the owner
+                      </Typography>
+                    ) : (
+                      <Link
+                        href={`/profile/${_nftOwner}`}
+                        style={{ marginLeft: '10px' }}
+                      >
+                        <Typography
+                          sx={{
+                            marginLeft: '10px',
+                            color: 'primary.main',
+                            cursor: `url("/images/cursor-pointer.svg"), auto`,
+                          }}
+                        >
+                          {_nftOwner ? dottedAddress(_nftOwner) : '...'}
+                        </Typography>
+                      </Link>
+                    )}
+                  </Box>
+                </Box>
+
+                {listing && (
+                  <Box sx={{ display: 'flex', width: '100%', mt: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography
+                          variant="lbl-md"
+                          sx={{ mb: '5px', color: 'text.secondary' }}
+                        >
+                          PRICE
+                        </Typography>
+                        <Typography
+                          variant="p-lg-bk"
+                          sx={{
+                            lineHeight: '24px',
+                          }}
+                        >
+                          {formatNumber(listingUSD)}{' '}
+                          {user?.default_currency
+                            ? user?.default_currency.replace('USDC', 'USD')
+                            : 'USD'}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box
+                          sx={{
+                            ml: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          <Typography
+                            variant="lbl-md"
+                            sx={{
+                              mb: '5px',
+                              color: 'text.secondary',
+                            }}
+                          >
+                            RECEIVE
+                          </Typography>
+                          <MultiCurrency
+                            nftAddress={collectionAddress}
+                            tokenId={nftId}
+                            paymentType={(listing as any)?.paymentType}
+                            priceWei={(listing as any)?.priceInWei}
+                          />
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+              </Box>
+
+              <Box
+                sx={{
+                  borderBottom: 1,
+                  borderColor: 'transparent',
+                  ml: { xs: 1.5, md: 2 },
+                  mt: 4,
+                  mb: -2,
+                }}
+              >
+                <StyledTabs
+                  sx={{ width: 'fit-content' }}
+                  value={tab}
+                  onChange={(e: any, n: number) => e && setTab(n)}
+                >
+                  {' '}
+                  <Tab label="ATTRIBUTES" ref={attributesMobileButtonRef} />
+                  <Tab label="BIDS" ref={bidsMobileButtonRef} />
+                  <Tab label="PRIVATE BIDS" ref={privateBidsMobileButtonRef} />
+                </StyledTabs>
+              </Box>
+
+              {tab === 1 ? (
+                <TableContainer
+                  sx={{
+                    // 'height': '320px',
+                    'margin-bottom': '50px',
+                    'width': '100%',
+                    'overflowY': 'scroll',
+                    'overflowX': 'hidden',
+                    '&::-webkit-scrollbar': {
+                      width: 0,
+                    },
+                    'borderColor': 'transparent',
+                    'pb': 3,
+                  }}
+                >
+                  <Table
+                    sx={{
+                      // 'ml': { xs: 1.5, md: 3 },
+                      '& .MuiTableCell-root': {
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                      },
+                      // background: 'red'
+                    }}
+                    stickyHeader
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+                            <Typography
+                              variant="lbl-sm"
+                              sx={{
+                                letterSpacing: '0em',
+                                textAlign: 'left',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              User
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'baseline',
+                            }}
+                          >
+                            <Button
+                              onClick={() => setPriceSort(!priceSort)}
+                              size={'small'}
+                              sx={{
+                                borderRadius: 0,
+                                textTransform: 'none',
+                                padding: '2px',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              <SortLabel
+                                text={'Price'}
+                                direction={priceSort ? 'asc' : 'desc'}
+                              />
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    {bidsInfo?.length && !isExpired && !isInvalidOwner ? (
+                      <TableBody>
+                        {getSortedBids().map((bid: any, _index: number) => (
+                          <TableRow key={_index}>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                }}
+                              >
+                                <img
+                                  src={bid?.userImage}
+                                  width="34"
+                                  height="34"
+                                />
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    pl: '20px',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="lbl-sm"
+                                    sx={{
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                    }}
+                                  >
+                                    {bid?.user}
+                                  </Typography>
+                                  <Typography
+                                    variant="lbl-md"
+                                    sx={{
+                                      fontWeight: 400,
+                                      lineHeight: '21px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    {bid?.bidPlacedAt}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {bid?.isExpired && (
+                                <Typography
+                                  sx={{
+                                    color: 'primary.main',
+                                  }}
+                                >
+                                  Expired
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-end',
+                                  pr: 2,
+                                }}
+                              >
+                                <Box sx={{ display: 'flex' }}>
+                                  <img
+                                    src={`/images/${
+                                      isNode
+                                        ? Number(bid?.paymentType) === 0
+                                          ? 'avax'
+                                          : Number(bid?.paymentType) === 1
+                                          ? 'thor'
+                                          : 'usdc'
+                                        : 'avax'
+                                    }Icon.svg`}
+                                    width="24"
+                                    height="20"
+                                  />
+                                  <Typography
+                                    variant="p-md-bk"
+                                    sx={{
+                                      lineHeight: '24px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'right',
+                                    }}
+                                  >
+                                    {bid?.price}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Box
+                            sx={(theme) => ({
+                              border: `1px dashed ${theme.palette.text.secondary}`,
+                              width: '100%',
+                              height: '40px',
+                              padding: '0!important',
+                              // ml: 2,
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            })}
+                          >
+                            <Typography
+                              variant={'lbl-md'}
+                              sx={{
+                                color: 'text.secondary',
+                                textAlign: 'center',
+                              }}
+                            >
+                              No bids have been made
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Table>
+                </TableContainer>
+              ) : tab === 2 ? (
+                <TableContainer
+                  sx={{
+                    // 'height': '320px',
+                    'margin-bottom': '50px',
+                    'width': '100%',
+                    'overflowY': 'scroll',
+                    'overflowX': 'hidden',
+                    '&::-webkit-scrollbar': {
+                      width: 0,
+                    },
+                    'borderColor': 'transparent',
+                    'pb': 3,
+                  }}
+                >
+                  <Table
+                    sx={{
+                      // 'ml': { xs: 1.5, md: 3 },
+                      '& .MuiTableCell-root': {
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                      },
+                      // background: 'red'
+                    }}
+                    stickyHeader
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+                            <Typography
+                              variant="lbl-sm"
+                              sx={{
+                                letterSpacing: '0em',
+                                textAlign: 'left',
+                              }}
+                            >
+                              User
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'baseline',
+                            }}
+                          >
+                            <Button
+                              onClick={() => setOtcPriceSort(!otcPriceSort)}
+                              size={'small'}
+                              sx={{
+                                borderRadius: 0,
+                                textTransform: 'none',
+                                padding: '2px',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              <SortLabel
+                                text={'Price'}
+                                direction={otcPriceSort ? 'asc' : 'desc'}
+                              />
+                            </Button>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    {otcBidsInfo?.length ? (
+                      <TableBody>
+                        {getSortedOtcBids().map((bid: any, _index: number) => (
+                          <TableRow key={_index}>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                }}
+                              >
+                                <img
+                                  src={bid?.userImage}
+                                  width="34"
+                                  height="34"
+                                />
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    pl: '20px',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="lbl-sm"
+                                    sx={{
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                    }}
+                                  >
+                                    {bid?.user}
+                                  </Typography>
+                                  <Typography
+                                    variant="lbl-md"
+                                    sx={{
+                                      fontWeight: 400,
+                                      lineHeight: '21px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'left',
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    {bid?.bidPlacedAt}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {bid?.isExpired && (
+                                <Typography
+                                  sx={{
+                                    color: 'primary.main',
+                                  }}
+                                >
+                                  Expired
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-end',
+                                  pr: 2,
+                                }}
+                              >
+                                <Box sx={{ display: 'flex' }}>
+                                  <img
+                                    src="/images/avaxIcon.svg"
+                                    width="24"
+                                    height="20"
+                                  />
+                                  <Typography
+                                    variant="p-md-bk"
+                                    sx={{
+                                      lineHeight: '24px',
+                                      letterSpacing: '0em',
+                                      textAlign: 'right',
+                                    }}
+                                  >
+                                    {bid?.price}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Box
+                            sx={(theme) => ({
+                              border: `1px dashed ${theme.palette.text.secondary}`,
+                              width: '100%',
+                              height: '40px',
+                              padding: '0!important',
+                              // ml: 2,
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            })}
+                          >
+                            <Typography
+                              variant={'lbl-md'}
+                              sx={{
+                                color: 'text.secondary',
+                                textAlign: 'center',
+                              }}
+                            >
+                              No private bids have been made
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box
+                  sx={{
+                    maxHeight: '40%',
+                    overflowY: 'scroll',
+                    pb: 3,
+                  }}
+                  className={styles.hideScroll}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      // pl: 4,
+                      pt: 2,
+                      justifyContent: 'flex-start',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    SEE {!seeall ? 'MORE' : 'LESS'}
-                    <img
-                      style={{
-                        marginLeft: 3,
-                        marginBottom: 1,
-                        transform: `rotate(${seeall ? '180deg' : '0deg'})`,
-                      }}
-                      src="/images/showall.png"
-                      width="13px"
-                      height="7px"
-                    />
-                  </Typography>
+                    {nftData?.nftAttributes &&
+                      nftData?.nftAttributes.map(
+                        (attribute: Attribute, _index: number) =>
+                          'attechedperks' !==
+                            attribute?.trait_type?.toLowerCase() &&
+                          'isodinkey' !==
+                            attribute?.trait_type?.toLowerCase() && (
+                            <Box
+                              key={_index}
+                              sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                border: '1px solid',
+                                // bgcolor: 'background.default',
+                                justifyContent: 'space-between',
+                                padding: 1,
+                                margin: 1,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  color: 'text.secondary',
+                                  textTransform: 'uppercase',
+                                  lineHeight: '15px',
+                                }}
+                                variant="lbl-md"
+                              >
+                                {isNodeNFT(collectionAddress, chain) &&
+                                'rewards' ===
+                                  attribute?.trait_type?.toLowerCase()
+                                  ? 'Rewards (THOR)'
+                                  : 'due date' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? 'Due date (Days)'
+                                  : 'isdirectburnkey' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? 'Type'
+                                  : attribute.trait_type}
+                              </Typography>
+                              <Typography variant="p-lg-bk">
+                                {isNodeNFT(collectionAddress, chain) &&
+                                'rewards' ===
+                                  attribute?.trait_type?.toLowerCase()
+                                  ? formatDecimals(
+                                      attribute?.value.toString(),
+                                      18,
+                                      false,
+                                      6
+                                    )
+                                  : 'due date' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? moment
+                                      .duration(
+                                        moment(
+                                          parseInt(
+                                            attribute?.value.toString()
+                                          ) * 1000
+                                        ).diff(moment())
+                                      )
+                                      .asDays() >= 0
+                                    ? moment
+                                        .duration(
+                                          moment(
+                                            parseInt(
+                                              attribute?.value.toString()
+                                            ) * 1000
+                                          ).diff(moment())
+                                        )
+                                        .asDays()
+                                        .toFixed(0)
+                                    : 'Inactive'
+                                  : 'isdirectburnkey' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${attribute?.value ? 'Origin' : 'Drift'}`
+                                  : 'vrr multiplier' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${Number(attribute?.value) / 10}`
+                                  : 'voucher' ===
+                                    attribute?.trait_type?.toLowerCase()
+                                  ? `${formatDecimals(
+                                      attribute?.value.toString(),
+                                      18,
+                                      false,
+                                      0
+                                    )} THOR`
+                                  : `${attribute?.value}${
+                                      attribute?.display_type ===
+                                      'boost_percentage'
+                                        ? attribute?.trait_type.toLocaleLowerCase() ===
+                                          'temporary booster'
+                                          ? activePerks &&
+                                            activePerks.length !== 0
+                                            ? `% (${activePerks.join(',')})`
+                                            : `%`
+                                          : '%'
+                                        : ''
+                                    }`}
+                              </Typography>
+                            </Box>
+                          )
+                      )}
+                    {isPerk && perkData && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          border: '1px solid',
+                          bgcolor: 'text.primary',
+                          justifyContent: 'space-between',
+                          padding: 1,
+                          margin: 1,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: 'text.secondary',
+                            textTransform: 'uppercase',
+                            lineHeight: '15px',
+                          }}
+                          variant="lbl-md"
+                        >
+                          Days
+                        </Typography>
+                        {(perkData as any).duration.toString() === '0' ? (
+                          <Typography
+                            sx={{
+                              fontSize: '30px',
+                              lineHeight: '18px',
+                            }}
+                            variant="p-lg-bk"
+                          >
+                            &infin;
+                          </Typography>
+                        ) : (
+                          <Typography variant="p-lg-bk">30</Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
                 </Box>
               )}
-            </Box>
-            {isOwner ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  ml: '25px',
-                }}
-              >
-                <Box>
-                  <Typography variant="p-md-bk" sx={ownertext}>
-                    Current Owner
-                  </Typography>
-                  <Box sx={imgStyle}>
-                    <img
-                      src="/images/Rectangle.png"
-                      width="15px"
-                      height="15px"
-                    />
-                    <Typography variant="lbl-md" sx={ownerDetail}>
-                      You are the owner
-                    </Typography>
-                  </Box>
-                </Box>
-                {listing && !isExpired && (
-                  <Box>
-                    <Typography
-                      variant="lbl-md"
-                      sx={{ mb: '5px', color: palette.secondary.storm[70] }}
-                    >
-                      PRICE
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{ color: palette.primary.storm }}
-                    >
-                      {formatNumber(listingUSD)} USD
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  ml: '25px',
-                }}
-              >
-                <Box>
-                  <Box sx={imgStyle}>
-                    <Typography variant="lbl-md" sx={ownerDetail}>
-                      {!pulicUserDataLoading ? (
-                        publicUser?.address ? (
-                          <>
-                            <Typography variant="p-md-bk" sx={ownertext}>
-                              Current Owner
-                            </Typography>
-                            <Box sx={{ display: 'flex' }}>
-                              <img
-                                src="/images/Rectangle.png"
-                                width="15px"
-                                height="15px"
-                              />
-                              <Link
-                                href={`/profile/${_nftOwner}`}
-                                style={{ marginLeft: '10px' }}
-                              >
-                                {_nftOwner ? dottedAddress(_nftOwner) : '...'}
-                              </Link>
-                            </Box>
-                          </>
-                        ) : (
-                          <>
-                            <Typography variant="p-md-bk" sx={ownertext}>
-                              Current Owner
-                            </Typography>
 
-                            <Box sx={{ display: 'flex' }}>
-                              <img
-                                src="/images/Rectangle.png"
-                                width="15px"
-                                height="15px"
-                              />
-                              <Typography
-                                sx={{
-                                  marginLeft: '10px',
-                                  color: palette.primary.storm,
-                                }}
-                              >
-                                {_nftOwner ? dottedAddress(_nftOwner) : '...'}
-                              </Typography>
-                            </Box>
-                          </>
-                        )
-                      ) : (
-                        ''
-                      )}
-                    </Typography>
-                  </Box>
-                </Box>
-                {listing && !isExpired && (
-                  <Box>
-                    <Typography
-                      variant="lbl-md"
-                      sx={{ mb: '5px', color: palette.secondary.storm[70] }}
-                    >
-                      PRICE
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{ color: palette.primary.storm }}
-                    >
-                      {formatNumber(listingUSD)} USD
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-            <Box
-              sx={{
-                borderBottom: 1,
-                borderColor: 'transparent',
-                ml: { xs: 1.5, md: 2 },
-                mt: 4,
-                mb: -2,
-              }}
-            >
-              <StyledTabs
-                sx={{ width: 'fit-content' }}
-                value={tab}
-                onChange={(e: any, n: number) => e && settab(n)}
-              >
-                <Tab label="ATTRIBUTES" ref={attributesButtonRef} />
-                <Tab label="BIDS" ref={bidsButtonRef} />
-                <Tab label="Private Bids" ref={privateBidsButtonRef} />
-              </StyledTabs>
-            </Box>
-            {tab === 1 ? (
-              <TableContainer
-                sx={{
-                  'height': '320px',
-                  'width': '100%',
-                  'overflowY': 'scroll',
-                  'overflowX': 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: 0,
-                  },
-                  'borderColor': 'transparent',
-                  // background: 'green',
-                  // ml: 2
-                  // pr: 2
-                }}
-              >
-                <Table
-                  sx={{
-                    'ml': { xs: 1.5, md: 3 },
-                    '& .MuiTableCell-root': {
-                      paddingTop: '10px',
-                      paddingBottom: '10px',
-                    },
-                    // background: 'red'
-                  }}
-                  stickyHeader
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'left',
-                              color: '#00000080',
-                            }}
-                          >
-                            User
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell></TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'baseline',
-                          }}
-                        >
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'right',
-                              color: '#00000080',
-                            }}
-                          >
-                            Price
-                          </Typography>
-                          <IconButton onClick={() => setPriceSort(!priceSort)}>
-                            <img
-                              style={{
-                                transform: `rotate(${
-                                  priceSort ? '0deg' : '180deg'
-                                })`,
-                              }}
-                              src="/images/priceFilter.png"
-                            />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  {bidsInfo?.length && !isExpired && !isInvalidOwner ? (
-                    <TableBody>
-                      {getSortedBids().map((bid: any, _index: number) => (
-                        <TableRow key={_index}>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                              }}
-                            >
-                              <img src={bid.userImage} width="34" height="34" />
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'flex-start',
-                                  pl: '20px',
-                                }}
-                              >
-                                <Typography
-                                  variant="lbl-sm"
-                                  sx={{
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  {bid.user}
-                                </Typography>
-                                <Typography
-                                  variant="lbl-md"
-                                  sx={{
-                                    fontWeight: 400,
-                                    lineHeight: '21px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                    color: '#00000066',
-                                  }}
-                                >
-                                  {bid.bidPlacedAt}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {bid.isExpired && (
-                              <Typography
-                                sx={{
-                                  color: palette.primary.fire,
-                                }}
-                              >
-                                Expired
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                pr: 2,
-                              }}
-                            >
-                              <Box sx={{ display: 'flex' }}>
-                                <img
-                                  src={`/images/${
-                                    isNode
-                                      ? Number(bid.paymentType) === 0
-                                        ? 'avax'
-                                        : 'thor'
-                                      : 'avax'
-                                  }Icon.svg`}
-                                  width="24"
-                                  height="20"
-                                />
-                                <Typography
-                                  variant="p-md-bk"
-                                  sx={{
-                                    lineHeight: '24px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'right',
-                                  }}
-                                >
-                                  {bid.price}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  ) : (
-                    <Box
-                      sx={{
-                        border: '1px dashed rgba(0, 0, 0, 0.4)',
-                        width: '100%',
-                        height: '40px',
-                        padding: '0!important',
-                        ml: 2,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography
-                        variant={'lbl-md'}
-                        sx={{ color: '#808080', textAlign: 'center' }}
-                      >
-                        No bids have been made
-                      </Typography>
-                    </Box>
-                  )}
-                </Table>
-              </TableContainer>
-            ) : tab === 2 ? (
-              <TableContainer
-                sx={{
-                  'height': '320px',
-                  'width': '100%',
-                  'overflowY': 'scroll',
-                  'overflowX': 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: 0,
-                  },
-                  'borderColor': 'transparent',
-                  // background: 'green',
-                  // ml: 2
-                  // pr: 2
-                }}
-              >
-                <Table
-                  sx={{
-                    'ml': { xs: 1.5, md: 3 },
-                    '& .MuiTableCell-root': {
-                      paddingTop: '10px',
-                      paddingBottom: '10px',
-                    },
-                    // background: 'red'
-                  }}
-                  stickyHeader
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'left',
-                              color: '#00000080',
-                            }}
-                          >
-                            User
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'baseline',
-                          }}
-                        >
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'right',
-                              color: '#00000080',
-                            }}
-                          >
-                            Price
-                          </Typography>
-                          <IconButton
-                            onClick={() => setOtcPriceSort(!otcPriceSort)}
-                          >
-                            <img
-                              style={{
-                                transform: `rotate(${
-                                  otcPriceSort ? '0deg' : '180deg'
-                                })`,
-                              }}
-                              src="/images/priceFilter.png"
-                            />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  {otcBidsInfo?.length ? (
-                    <TableBody>
-                      {getSortedOtcBids().map((bid: any, _index: number) => (
-                        <TableRow key={_index}>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                              }}
-                            >
-                              <img src={bid.userImage} width="34" height="34" />
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'flex-start',
-                                  pl: '20px',
-                                }}
-                              >
-                                <Typography
-                                  variant="lbl-sm"
-                                  sx={{
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  {bid.user}
-                                </Typography>
-                                <Typography
-                                  variant="lbl-md"
-                                  sx={{
-                                    fontWeight: 400,
-                                    lineHeight: '21px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                    color: '#00000066',
-                                  }}
-                                >
-                                  {bid.bidPlacedAt}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                pr: 2,
-                              }}
-                            >
-                              <Box sx={{ display: 'flex' }}>
-                                <img
-                                  src="/images/avaxIcon.svg"
-                                  width="24"
-                                  height="20"
-                                />
-                                <Typography
-                                  variant="p-md-bk"
-                                  sx={{
-                                    lineHeight: '24px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'right',
-                                  }}
-                                >
-                                  {bid.price}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  ) : (
-                    <Box
-                      sx={{
-                        border: '1px dashed rgba(0, 0, 0, 0.4)',
-                        width: '100%',
-                        height: '40px',
-                        padding: '0!important',
-                        ml: 2,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography
-                        variant={'lbl-md'}
-                        sx={{ color: '#808080', textAlign: 'center' }}
-                      >
-                        No private bids have been made
-                      </Typography>
-                    </Box>
-                  )}
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box
-                sx={{
-                  maxHeight: '40%',
-                  overflowY: 'scroll',
-                  minHeight: '320px',
-                }}
-                className={styles.hideScroll}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    pl: 4,
-                    pt: 2,
-                    justifyContent: 'flex-start',
-                    flexWrap: 'wrap',
-                    // maxHeight: '40%',
-                    // overflowY: 'scroll',
-                  }}
-                >
-                  {nftData?.nftAttributes &&
-                    nftData?.nftAttributes.map(
-                      (attribute: Attribute, _index: number) => (
-                        <Box
-                          key={_index}
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            border: '1px solid',
-                            borderColor: 'black',
-                            justifyContent: 'space-between',
-                            padding: 1,
-                            margin: 1,
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              color: palette.secondary.storm[70],
-                              textTransform: 'uppercase',
-                              lineHeight: '15px',
-                            }}
-                            variant="lbl-md"
-                          >
-                            {isNodeNFT(collectionAddress, chain) &&
-                            'rewards' === attribute?.trait_type?.toLowerCase()
-                              ? 'Rewards (THOR)'
-                              : 'due date' ===
-                                attribute?.trait_type?.toLowerCase()
-                              ? 'Due date (Days)'
-                              : attribute.trait_type}
-                          </Typography>
-                          <Typography
-                            sx={{ color: palette.primary.storm }}
-                            variant="p-lg-bk"
-                          >
-                            {isNodeNFT(collectionAddress, chain) &&
-                            'rewards' === attribute?.trait_type?.toLowerCase()
-                              ? formatDecimals(
-                                  attribute.value.toString(),
-                                  18,
-                                  false,
-                                  6
-                                )
-                              : 'due date' ===
-                                attribute?.trait_type?.toLowerCase()
-                              ? moment
-                                  .duration(
-                                    moment(
-                                      parseInt(attribute.value.toString()) *
-                                        1000
-                                    ).diff(moment())
-                                  )
-                                  .days() >= 0
-                                ? moment
-                                    .duration(
-                                      moment(
-                                        parseInt(attribute.value.toString()) *
-                                          1000
-                                      ).diff(moment())
-                                    )
-                                    .days()
-                                : 'Inactive'
-                              : attribute.value}
-                          </Typography>
-                        </Box>
-                      )
-                    )}
-                </Box>
-              </Box>
-            )}
-            {/* {(!bidsInfo?.length && tab === 1) ||
-              (!otcBidsInfo?.length && tab === 2) ? (
-                <Box
-                  sx={{
-                    border: '1px dashed rgba(0, 0, 0, 0.4)',
-                    width: '100%',
-                    height: '5%',
-                    padding: '0!important',
-                    ml: 2,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Typography
-                    variant={'lbl-md'}
-                    sx={{ color: '#808080', textAlign: 'center' }}
-                  >
-                    No bids have been made
-                  </Typography>
-                </Box>
-              ):''} */}
-            {isOwner ? (
-              <>
-                <OwnerButtons
+              {isOwner ? (
+                <>
+                  <OwnerButtons
+                    user={user}
+                    setOpenType={setOpenType}
+                    showModal={showModal}
+                    setIsOpen={setIsOpen}
+                    listing={listing}
+                    isExpired={isExpired}
+                    isInvalidOwner={isInvalidOwner}
+                    collectionAddress={collectionAddress}
+                    tokenId={Number(nftId)}
+                    showListModal={showListModal}
+                    setShowListModal={handleModalClick}
+                    activeTab={tab}
+                    refetchListing={refetchListing}
+                    nftData={nftData}
+                    cta={cta}
+                  />
+                </>
+              ) : (
+                <BuyerButtons
                   user={user}
                   setOpenType={setOpenType}
                   showModal={showModal}
@@ -2067,1069 +3488,147 @@ const NFTdetailV2 = () => {
                   isInvalidOwner={isInvalidOwner}
                   collectionAddress={collectionAddress}
                   tokenId={Number(nftId)}
-                  showListModal={showListModal}
-                  setShowListModal={handleModalClick}
-                  activeTab={tab}
-                  refetchListing={refetchListing}
+                  setActiveBidType={setActiveBidType}
+                  isPrivate={tab === 2}
+                  isNormal={tab === 1}
                   nftData={nftData}
                 />
-                <ListNft
-                  open={showListModal}
-                  listNFT={nftData}
-                  handleClose={handleModalClick}
-                  openToast={ListModalResponse}
-                />
-              </>
-            ) : (
-              <BuyerButtons
-                user={user}
-                setOpenType={setOpenType}
-                showModal={showModal}
-                setIsOpen={setIsOpen}
-                listing={listing}
-                isExpired={isExpired}
-                isInvalidOwner={isInvalidOwner}
-                collectionAddress={collectionAddress}
-                tokenId={Number(nftId)}
-                setActiveBidType={setActiveBidType}
-                isPrivate={tab === 2}
-                isNormal={tab === 1}
-                nftData={nftData}
-              />
-            )}
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <Divider sx={divider} />
-          </Grid>
-          <Grid
-            item
-            miniMobile={12}
-            md={6}
-            mt={10}
-            sx={{
-              '&.MuiGrid-item': { padding: '0px' },
-              'display': 'flex',
-              'justifyContent': 'center',
-            }}
-          >
-            <Box
-              sx={{
-                height: {
-                  lg: '580px',
-                  sm: '500px',
-                  miniMobile: '300px',
-                },
-              }}
-            >
-              <Paper
-                elevation={0}
-                style={{
-                  aspectRatio: '1',
-                  height: '100%',
-                  backgroundImage: `url(${nftData?.nftImage})`, // THis is the what you want, I guess
-                  position: 'relative',
-                  transitionDuration: '0.1s',
-                  zIndex: 2,
-                  maxWidth: 'auto',
-                  // paddingTop: '20px',
-                  // paddingBottom: '20px',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }}
-              >
-                <Box position="absolute" top="18.7px" right="18.7px">
-                  <LikeButton
-                    isChecked={isLiked}
-                    id={nftId}
-                    nftId={nftId}
-                    collectionAddr={collectionAddress}
-                    likeNFTHandler2={likeNFT}
-                  />
-                </Box>
-              </Paper>
-            </Box>
-          </Grid>
+              )}
+            </Grid>
+            <Grid item xs={12} md={12}>
+              <Divider sx={divider} />
+            </Grid>
 
-          {/* </Grid> */}
-
-          <BuyNft open={open} handleClose={handleClose} openToast={openToast} />
-          <PlaceBid
-            collectionAddress={collectionAddress}
-            tokenId={Number(nftId)}
-            open={isOpen}
-            handleClose={handleClose}
-            openToast={openToast}
-            placingBid={placingBid}
-            nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
-            activeBidType={activeBidType}
-          />
-          <BuyNFTModal
-            collectionAddress={collectionAddress}
-            tokenId={Number(nftId)}
-            open={isOpen && openType === 'purchase'}
-            handleClose={handleClose}
-            openToast={openToast}
-            refresh={refetchListing}
-            nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
-          />
-          <Snackbar
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            open={openSnack}
-            autoHideDuration={1800}
-            onClose={closeSnackbar}
-          >
-            <Box
-              sx={{
-                'display': 'flex',
-                'alignItems': 'center',
-                '& .MuiAlert-root': {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-              }}
+            <Snackbar
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={openSnack}
+              autoHideDuration={1800}
+              onClose={closeSnackbar}
             >
-              {/* <img src="/images/nftImage.png" width="50px" /> */}
-
-              <Alert
-                icon={
-                  <Image width={40} height={40} src="/images/nftImage.png" />
-                }
-                severity="success"
-                sx={{
-                  'width': '100%',
-                  'padding': '0px 32px 0px 0px',
-                  'background': 'black',
-                  '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
-                  '& .MuiButtonBase-root-MuiIconButton-root': {
-                    display: 'none',
-                  },
-                }}
-              >
-                <Typography variant="p-md-bk">
-                  {openType === 'bid'
-                    ? 'PLACING A BID...'
-                    : 'PROCESSING PURCHASE...'}
-                </Typography>
-              </Alert>
-            </Box>
-          </Snackbar>
-          <Snackbar
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            open={openSnackSuccess}
-            autoHideDuration={9000}
-            onClose={closeSnackbarSuccess}
-          >
-            <Box
-              sx={{
-                'display': 'flex',
-                'alignItems': 'center',
-                '& .MuiAlert-root': {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-              }}
-            >
-              <Alert
-                icon={
-                  <Image width={40} height={40} src="/images/nftImage.png" />
-                }
-                severity="success"
-                sx={{
-                  'width': '100%',
-                  'padding': '0px 16px 0px 0px',
-                  'background': '#30B82D',
-                  'marginLeft': '4px',
-
-                  '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
-                  '& .css-1e0d89p-MuiButtonBase-root-MuiIconButton-root': {
-                    display: 'none',
-                  },
-                }}
-              >
-                <Box
-                  style={{
-                    display: 'flex',
-                    justifyItems: 'center',
-                    paddingRight: '10px',
-                  }}
-                >
-                  <Typography variant="p-md" sx={{ marginTop: '4px' }}>
-                    {openType === 'bid' ? 'VIEW RECENT BID' : 'VIEW MY NEW NFT'}
-                  </Typography>
-                  <ArrowForwardIos
-                    fontSize="small"
-                    style={{ color: 'white', marginLeft: '8px' }}
-                  />
-                </Box>
-              </Alert>
-            </Box>
-          </Snackbar>
-        </Grid>
-      </Box>
-    );
-  } else {
-    ///// if mobile or tablet
-    return (
-      <Box
-        sx={{
-          alignItems: 'center',
-          margin: 'auto',
-          marginLeft: 'auto',
-          width: '100%',
-        }}
-      >
-        <Box
-          sx={{
-            padding: '5px 20px',
-          }}
-        >
-          <Button ref={backMobileButtonRef} onClick={() => router.back()}>
-            {' '}
-            <ArrowBackIos
-              sx={{ height: '1.2em', color: palette.secondary.storm[70] }}
-            />
-            <Typography
-              sx={{ mt: '5px', color: palette.secondary.storm[70] }}
-              variant="lbl-md"
-            >
-              {' '}
-              Back
-            </Typography>
-          </Button>
-        </Box>
-        <Grid container spacing={0}>
-          {/* <Grid md={isTablet ? 10 : 12} xs={12} mt={2}>
-            <img width="100%" height="auto" src={nftData?.nftImage} />
-          </Grid> */}
-          <Grid
-            item
-            miniMobile={12}
-            xs={12}
-            md={12}
-            padding={2}
-            sx={{ margin: 'auto' }}
-          >
-            <Box sx={box1}>
               <Box
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  flexDirection: 'column',
-                  paddingBottom: '10px',
+                  'display': 'flex',
+                  'alignItems': 'center',
+                  '& .MuiAlert-root': {
+                    display: 'flex',
+                    alignItems: 'center',
+                  },
                 }}
               >
-                {loading ? (
-                  <CircularProgress />
-                ) : currentCollection?.profile_image ? (
-                  <Link href={`/collections/${currentCollection.address}`}>
-                    <img
-                      style={{ cursor: 'pointer' }}
-                      src={currentCollection?.profile_image}
-                      width="88px"
-                      height="88px"
-                    />
-                  </Link>
-                ) : (
-                  <img src={nftData?.nftImage} width="88px" height="88px" />
-                )}
-                {currentCollection?.name && (
-                  <Typography
-                    variant="h2"
-                    sx={{
-                      fontFamily: 'Nexa',
-                      fontSize: '14px',
-                      fontWeight: 400,
-                      lineHeight: '21.22px',
-                      letterSpacing: '0.04em',
-                      textAlign: 'left',
-                      paddingTop: '20px',
-                      color: palette.primary.storm,
+                {/* <img src="/images/nftImage.png" width="50px" /> */}
+
+                <Alert
+                  icon={
+                    <Image width={40} height={40} src="/images/nftImage.png" />
+                  }
+                  severity="success"
+                  sx={{
+                    'width': '100%',
+                    'padding': '0px 32px 0px 0px',
+                    'bgcolor': 'text.primary',
+                    '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
+                    '& .MuiButtonBase-root-MuiIconButton-root': {
+                      display: 'none',
+                    },
+                  }}
+                >
+                  <Typography variant="p-md-bk">
+                    {openType === 'bid'
+                      ? 'PLACING A BID...'
+                      : 'PROCESSING PURCHASE...'}
+                  </Typography>
+                </Alert>
+              </Box>
+            </Snackbar>
+            <Snackbar
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={openSnackSuccess}
+              autoHideDuration={9000}
+              onClose={closeSnackbarSuccess}
+            >
+              <Box
+                sx={{
+                  'display': 'flex',
+                  'alignItems': 'center',
+                  '& .MuiAlert-root': {
+                    display: 'flex',
+                    alignItems: 'center',
+                  },
+                }}
+              >
+                <Alert
+                  icon={
+                    <Image width={40} height={40} src="/images/nftImage.png" />
+                  }
+                  severity="success"
+                  sx={{
+                    'width': '100%',
+                    'padding': '0px 16px 0px 0px',
+                    'bgcolor': 'success.main',
+                    'marginLeft': '4px',
+
+                    '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
+                    '& .css-1e0d89p-MuiButtonBase-root-MuiIconButton-root': {
+                      display: 'none',
+                    },
+                  }}
+                >
+                  <Box
+                    style={{
+                      display: 'flex',
+                      justifyItems: 'center',
+                      paddingRight: '10px',
                     }}
                   >
-                    {currentCollection?.name}
-                  </Typography>
-                )}
-              </Box>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Typography sx={titlee}>
-                  {loading ? null : nftData?.nftName}
-                </Typography>
-                <Typography
-                  className="colDetail"
-                  variant="p-lg-bk"
-                  sx={{
-                    lineHeight: '27.29px',
-                    // textAlign: 'left',
-                    textOverflow: 'ellipsis',
-                    // overflowX: 'auto',
-                    overflowY: seeall ? 'visible' : 'hidden',
-                    height: '100%',
-                    color: palette.primary.storm,
-                  }}
-                  height={
-                    seeall
-                      ? 'auto'
-                      : nftData?.nftDescription || nftData?.nftName
-                      ? '7px'
-                      : '0px'
-                  }
-                >
-                  {loading ? <CircularProgress /> : nftData?.nftDescription}
-                </Typography>
-              </Box>
-            </Box>
-            {isOwner ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box>
-                  <Typography variant="p-md-bk" sx={ownertext}>
-                    Current Owner
-                  </Typography>
-                  <Box sx={imgStyle}>
-                    <img
-                      src="/images/Rectangle.png"
-                      width="15px"
-                      height="15px"
+                    <Typography variant="p-md" sx={{ marginTop: '4px' }}>
+                      {openType === 'bid'
+                        ? 'VIEW RECENT BID'
+                        : 'VIEW MY NEW NFT'}
+                    </Typography>
+                    <ArrowForwardIos
+                      fontSize="small"
+                      style={{ marginLeft: '8px' }}
                     />
-                    <Typography variant="p-lg" sx={ownerDetail}>
-                      You are the owner
-                    </Typography>
                   </Box>
-                </Box>
-                {listing && !isExpired && (
-                  <Box>
-                    <Typography
-                      variant="lbl-md"
-                      sx={{ mb: '5px', color: palette.secondary.storm[70] }}
-                    >
-                      PRICE
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{ color: palette.primary.storm }}
-                    >
-                      {formatNumber(listingUSD)} USD
-                    </Typography>
-                  </Box>
-                )}
+                </Alert>
               </Box>
-            ) : (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box sx={box2}>
-                  <Typography variant="p-md-bk" sx={ownertext}>
-                    Current Owner
-                  </Typography>
-                  <Box sx={imgStyle}>
-                    <img
-                      src="/images/Rectangle.png"
-                      width="15px"
-                      height="15px"
-                    />
-                    <Link
-                      href={`/profile/${_nftOwner}`}
-                      style={{ marginLeft: '10px' }}
-                    >
-                      {_nftOwner ? dottedAddress(_nftOwner) : '...'}
-                    </Link>
-                  </Box>
-                </Box>
-                {listing && !isExpired && (
-                  <Box>
-                    <Typography
-                      variant="lbl-md"
-                      sx={{ mb: '5px', color: palette.secondary.storm[70] }}
-                    >
-                      PRICE
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{ color: palette.primary.storm }}
-                    >
-                      {formatNumber(listingUSD)} USD
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-            <Box
-              sx={{
-                borderBottom: 1,
-                borderColor: 'transparent',
-                ml: { xs: 1.5, md: 2 },
-                mt: 4,
-                mb: -2,
-              }}
-            >
-              <StyledTabs
-                sx={{ width: 'fit-content' }}
-                value={tab}
-                onChange={(e: any, n: number) => e && settab(n)}
-              >
-                {' '}
-                <Tab label="ATTRIBUTES" ref={attributesMobileButtonRef} />
-                <Tab label="BIDS" ref={bidsMobileButtonRef} />
-                <Tab label="Private Bids" ref={privateBidsMobileButtonRef} />
-              </StyledTabs>
-            </Box>
-
-            {tab === 1 ? (
-              <TableContainer
-                sx={{
-                  'height': '320px',
-                  'width': '100%',
-                  'overflowY': 'scroll',
-                  'overflowX': 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: 0,
-                  },
-                  'borderColor': 'transparent',
-                  'pb': 3,
-                }}
-              >
-                <Table
-                  sx={{
-                    'ml': { xs: 1.5, md: 3 },
-                    '& .MuiTableCell-root': {
-                      paddingTop: '10px',
-                      paddingBottom: '10px',
-                    },
-                    // background: 'red'
-                  }}
-                  stickyHeader
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'left',
-                              color: '#00000080',
-                            }}
-                          >
-                            User
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell></TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'baseline',
-                          }}
-                        >
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'right',
-                              color: '#00000080',
-                            }}
-                          >
-                            Price
-                          </Typography>
-                          <IconButton onClick={() => setPriceSort(!priceSort)}>
-                            <img
-                              style={{
-                                transform: `rotate(${
-                                  priceSort ? '0deg' : '180deg'
-                                })`,
-                              }}
-                              src="/images/priceFilter.png"
-                            />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  {bidsInfo?.length && !isExpired && !isInvalidOwner ? (
-                    <TableBody>
-                      {getSortedBids().map((bid: any, _index: number) => (
-                        <TableRow key={_index}>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                              }}
-                            >
-                              <img src={bid.userImage} width="34" height="34" />
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'flex-start',
-                                  pl: '20px',
-                                }}
-                              >
-                                <Typography
-                                  variant="lbl-sm"
-                                  sx={{
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  {bid.user}
-                                </Typography>
-                                <Typography
-                                  variant="lbl-md"
-                                  sx={{
-                                    fontWeight: 400,
-                                    lineHeight: '21px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                    color: '#00000066',
-                                  }}
-                                >
-                                  {bid.bidPlacedAt}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {bid.isExpired && (
-                              <Typography
-                                sx={{
-                                  color: palette.primary.fire,
-                                }}
-                              >
-                                Expired
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                pr: 2,
-                              }}
-                            >
-                              <Box sx={{ display: 'flex' }}>
-                                <img
-                                  src={`/images/${
-                                    isNode
-                                      ? Number(bid.paymentType) === 0
-                                        ? 'avax'
-                                        : 'thor'
-                                      : 'avax'
-                                  }Icon.svg`}
-                                  width="24"
-                                  height="20"
-                                />
-                                <Typography
-                                  variant="p-md-bk"
-                                  sx={{
-                                    lineHeight: '24px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'right',
-                                  }}
-                                >
-                                  {bid.price}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  ) : (
-                    <Box
-                      sx={{
-                        border: '1px dashed rgba(0, 0, 0, 0.4)',
-                        width: '100%',
-                        height: '40px',
-                        padding: '0!important',
-                        ml: 2,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography
-                        variant={'lbl-md'}
-                        sx={{ color: '#808080', textAlign: 'center' }}
-                      >
-                        No bids have been made
-                      </Typography>
-                    </Box>
-                  )}
-                </Table>
-              </TableContainer>
-            ) : tab === 2 ? (
-              <TableContainer
-                sx={{
-                  'height': '320px',
-                  'width': '100%',
-                  'overflowY': 'scroll',
-                  'overflowX': 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: 0,
-                  },
-                  'borderColor': 'transparent',
-                  'pb': 3,
-                }}
-              >
-                <Table
-                  sx={{
-                    'ml': { xs: 1.5, md: 3 },
-                    '& .MuiTableCell-root': {
-                      paddingTop: '10px',
-                      paddingBottom: '10px',
-                    },
-                    // background: 'red'
-                  }}
-                  stickyHeader
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'left',
-                              color: '#00000080',
-                            }}
-                          >
-                            User
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'baseline',
-                          }}
-                        >
-                          <Typography
-                            variant="lbl-sm"
-                            sx={{
-                              letterSpacing: '0em',
-                              textAlign: 'right',
-                              color: '#00000080',
-                            }}
-                          >
-                            Price
-                          </Typography>
-                          <IconButton
-                            onClick={() => setOtcPriceSort(!otcPriceSort)}
-                          >
-                            <img
-                              style={{
-                                transform: `rotate(${
-                                  otcPriceSort ? '0deg' : '180deg'
-                                })`,
-                              }}
-                              src="/images/priceFilter.png"
-                            />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  {otcBidsInfo?.length ? (
-                    <TableBody>
-                      {getSortedOtcBids().map((bid: any, _index: number) => (
-                        <TableRow key={_index}>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                              }}
-                            >
-                              <img src={bid.userImage} width="34" height="34" />
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'flex-start',
-                                  pl: '20px',
-                                }}
-                              >
-                                <Typography
-                                  variant="lbl-sm"
-                                  sx={{
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  {bid.user}
-                                </Typography>
-                                <Typography
-                                  variant="lbl-md"
-                                  sx={{
-                                    fontWeight: 400,
-                                    lineHeight: '21px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'left',
-                                    color: '#00000066',
-                                  }}
-                                >
-                                  {bid.bidPlacedAt}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                pr: 2,
-                              }}
-                            >
-                              <Box sx={{ display: 'flex' }}>
-                                <img
-                                  src="/images/avaxIcon.svg"
-                                  width="24"
-                                  height="20"
-                                />
-                                <Typography
-                                  variant="p-md-bk"
-                                  sx={{
-                                    lineHeight: '24px',
-                                    letterSpacing: '0em',
-                                    textAlign: 'right',
-                                  }}
-                                >
-                                  {bid.price}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  ) : (
-                    <Box
-                      sx={{
-                        border: '1px dashed rgba(0, 0, 0, 0.4)',
-                        width: '100%',
-                        height: '40px',
-                        padding: '0!important',
-                        ml: 2,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography
-                        variant={'lbl-md'}
-                        sx={{ color: '#808080', textAlign: 'center' }}
-                      >
-                        No private bids have been made
-                      </Typography>
-                    </Box>
-                  )}
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box
-                sx={{
-                  maxHeight: '40%',
-                  overflowY: 'scroll',
-                  minHeight: '320px',
-                  pb: 3,
-                }}
-                className={styles.hideScroll}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    // pl: 4,
-                    pt: 2,
-                    justifyContent: 'flex-start',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  {nftData?.nftAttributes &&
-                    nftData?.nftAttributes.map(
-                      (attribute: Attribute, _index: number) => (
-                        <Box
-                          key={_index}
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            border: '1px solid',
-                            borderColor: 'black',
-                            justifyContent: 'space-between',
-                            padding: 1,
-                            margin: 1,
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              color: palette.secondary.storm[70],
-                              textTransform: 'uppercase',
-                              lineHeight: '15px',
-                            }}
-                            variant="lbl-md"
-                          >
-                            {isNodeNFT(collectionAddress, chain) &&
-                            'rewards' === attribute?.trait_type?.toLowerCase()
-                              ? 'Rewards (THOR)'
-                              : 'due date' ===
-                                attribute?.trait_type?.toLowerCase()
-                              ? 'Due date (Days)'
-                              : attribute.trait_type}
-                          </Typography>
-                          <Typography
-                            sx={{ color: palette.primary.storm }}
-                            variant="p-lg-bk"
-                          >
-                            {isNodeNFT(collectionAddress, chain) &&
-                            'rewards' === attribute?.trait_type?.toLowerCase()
-                              ? formatDecimals(
-                                  attribute.value.toString(),
-                                  18,
-                                  false,
-                                  6
-                                )
-                              : 'due date' ===
-                                attribute?.trait_type?.toLowerCase()
-                              ? moment
-                                  .duration(
-                                    moment(
-                                      parseInt(attribute.value.toString()) *
-                                        1000
-                                    ).diff(moment())
-                                  )
-                                  .days() >= 0
-                                ? moment
-                                    .duration(
-                                      moment(
-                                        parseInt(attribute.value.toString()) *
-                                          1000
-                                      ).diff(moment())
-                                    )
-                                    .days()
-                                : 'Inactive'
-                              : attribute.value}
-                          </Typography>
-                        </Box>
-                      )
-                    )}
-                </Box>
-              </Box>
-            )}
-
-            {/* {(!bidsInfo?.length && tab === 1) ||
-              (!otcBidsInfo?.length && tab === 2 && (
-                <Box
-                  sx={{
-                    border: '1px dashed rgba(0, 0, 0, 0.4)',
-                    width: '100%',
-                    height: '5%',
-                    padding: '0!important',
-                    ml: 2,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Typography
-                    variant={'lbl-md'}
-                    sx={{ color: '#808080', textAlign: 'center' }}
-                  >
-                    No bids have been made
-                  </Typography>
-                </Box>
-              ))} */}
-
-            {isOwner ? (
-              <>
-                <OwnerButtons
-                  user={user}
-                  setOpenType={setOpenType}
-                  showModal={showModal}
-                  setIsOpen={setIsOpen}
-                  listing={listing}
-                  isExpired={isExpired}
-                  isInvalidOwner={isInvalidOwner}
-                  collectionAddress={collectionAddress}
-                  tokenId={Number(nftId)}
-                  showListModal={showListModal}
-                  setShowListModal={handleModalClick}
-                  activeTab={tab}
-                  refetchListing={refetchListing}
-                  nftData={nftData}
-                />
-                <ListNft
-                  open={showListModal}
-                  listNFT={nftData}
-                  handleClose={handleModalClick}
-                  openToast={ListModalResponse}
-                />
-              </>
-            ) : (
-              <BuyerButtons
-                user={user}
-                setOpenType={setOpenType}
-                showModal={showModal}
-                setIsOpen={setIsOpen}
-                listing={listing}
-                isExpired={isExpired}
-                isInvalidOwner={isInvalidOwner}
-                collectionAddress={collectionAddress}
-                tokenId={Number(nftId)}
-                setActiveBidType={setActiveBidType}
-                isPrivate={tab === 2}
-                isNormal={tab === 1}
-                nftData={nftData}
-              />
-            )}
+            </Snackbar>
           </Grid>
-          <Grid item xs={12} md={12}>
-            <Divider sx={divider} />
-          </Grid>
-          <BuyNft open={open} handleClose={handleClose} openToast={openToast} />
-          <PlaceBid
-            collectionAddress={collectionAddress}
-            tokenId={Number(nftId)}
-            open={isOpen}
-            handleClose={handleClose}
-            openToast={openToast}
-            placingBid={placingBid}
-            nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
-            activeBidType={activeBidType}
-          />
-          <BuyNFTModal
-            collectionAddress={collectionAddress}
-            tokenId={Number(nftId)}
-            open={isOpen && openType === 'purchase'}
-            handleClose={handleClose}
-            openToast={openToast}
-            refresh={refetchListing}
-            nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
-          />
-          <Snackbar
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            open={openSnack}
-            autoHideDuration={1800}
-            onClose={closeSnackbar}
-          >
-            <Box
-              sx={{
-                'display': 'flex',
-                'alignItems': 'center',
-                '& .MuiAlert-root': {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-              }}
-            >
-              {/* <img src="/images/nftImage.png" width="50px" /> */}
-
-              <Alert
-                icon={
-                  <Image width={40} height={40} src="/images/nftImage.png" />
-                }
-                severity="success"
-                sx={{
-                  'width': '100%',
-                  'padding': '0px 32px 0px 0px',
-                  'background': 'black',
-                  '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
-                  '& .MuiButtonBase-root-MuiIconButton-root': {
-                    display: 'none',
-                  },
-                }}
-              >
-                <Typography variant="p-md-bk">
-                  {openType === 'bid'
-                    ? 'PLACING A BID...'
-                    : 'PROCESSING PURCHASE...'}
-                </Typography>
-              </Alert>
-            </Box>
-          </Snackbar>
-          <Snackbar
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            open={openSnackSuccess}
-            autoHideDuration={9000}
-            onClose={closeSnackbarSuccess}
-          >
-            <Box
-              sx={{
-                'display': 'flex',
-                'alignItems': 'center',
-                '& .MuiAlert-root': {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-              }}
-            >
-              <Alert
-                icon={
-                  <Image width={40} height={40} src="/images/nftImage.png" />
-                }
-                severity="success"
-                sx={{
-                  'width': '100%',
-                  'padding': '0px 16px 0px 0px',
-                  'background': '#30B82D',
-                  'marginLeft': '4px',
-
-                  '& .MuiAlert-icon': { padding: '0px !important', mr: 4 },
-                  '& .css-1e0d89p-MuiButtonBase-root-MuiIconButton-root': {
-                    display: 'none',
-                  },
-                }}
-              >
-                <Box
-                  style={{
-                    display: 'flex',
-                    justifyItems: 'center',
-                    paddingRight: '10px',
-                  }}
-                >
-                  <Typography variant="p-md" sx={{ marginTop: '4px' }}>
-                    {openType === 'bid' ? 'VIEW RECENT BID' : 'VIEW MY NEW NFT'}
-                  </Typography>
-                  <ArrowForwardIos
-                    fontSize="small"
-                    style={{ color: 'white', marginLeft: '8px' }}
-                  />
-                </Box>
-              </Alert>
-            </Box>
-          </Snackbar>
-        </Grid>
-      </Box>
-    );
-  }
+        </Box>
+      )}
+      {isOpen && openType === 'bid' && (
+        <PlaceBid
+          collectionAddress={collectionAddress}
+          tokenId={Number(nftId)}
+          open={isOpen && openType === 'bid'}
+          handleClose={handleClose}
+          placingBid={placingBid}
+          acceptPayments={acceptPayments}
+          nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
+          activeBidType={activeBidType}
+        />
+      )}
+      {isOpen && openType === 'purchase' && (
+        <BuyNFTModal
+          collectionAddress={collectionAddress}
+          tokenId={Number(nftId)}
+          open={isOpen && openType === 'purchase'}
+          handleClose={handleClose}
+          acceptPayments={acceptPayments}
+          refresh={refetchListing}
+          nft={{ image: nftData?.nftImage, title: nftData?.nftName }}
+          listing={listing}
+        />
+      )}
+      {isOwner && showListModal && (
+        <BatchListNFTModal
+          open={showListModal}
+          nfts={nftInfor}
+          handleClose={handleModalClick}
+        />
+      )}
+    </Box>
+  );
 };
 
 export default NFTdetailV2;

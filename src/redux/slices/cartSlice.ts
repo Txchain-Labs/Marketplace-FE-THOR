@@ -29,17 +29,17 @@ const cartSlice = createSlice({
     closeCartModal: (state) => {
       state.isOpen = false;
     },
-    addToCart: (state, action: { payload: any }) => {
+    addToCart: (state, action: { payload: Listing }) => {
       const id: string = action.payload.nftAddress + action.payload.tokenId;
 
       if (state.cartedIds.includes(id)) return;
+      if (state.cartedIds.length >= 50) return;
 
       state.cartedIds.push(id);
       state.carted.push(action.payload);
     },
     removeFromCart: (state, action) => {
       const id: string = action.payload;
-
       const cartedIndex = state.cartedIds.findIndex(
         (cartedId) => cartedId === id
       );

@@ -21,9 +21,9 @@ export const useMarketplaceAddress = () => {
     case 43114: // Main C
       return '0x82b7a9EA06E757ec7c8cDdEcbAd6071e6894e4Cd';
     case 31337: // Thor net
-      return '';
+      return '0x';
     default:
-      return '';
+      return '0x';
   }
 };
 
@@ -202,6 +202,7 @@ export const useExecuteOrder = (toastData?: toastOptions) => {
             message: toastData?.message,
             severity: toastData?.severity,
             image: toastData?.image,
+            itemCount: toastData?.itemCount,
           })
         );
       }
@@ -213,6 +214,45 @@ export const useExecuteOrder = (toastData?: toastOptions) => {
         dispatch(
           showToast({
             message: 'Transaction failed',
+            severity: ToastSeverity.ERROR,
+            image: toastData?.image,
+            itemCount: toastData?.itemCount,
+          })
+        );
+      }
+    },
+  });
+};
+
+export const useExecuteList = (toastData?: toastOptions) => {
+  const marketplaceAddress = useMarketplaceAddress();
+  const dispatch = useDispatch();
+  return useContractWrite({
+    mode: 'recklesslyUnprepared',
+    address: marketplaceAddress,
+    abi: marketplaceAbi,
+    // functionName: 'safeExecuteOrder',
+    functionName: 'listNFT',
+    // functionName: 'ListNFT',
+    onSuccess: () => {
+      dispatch(setTxnStatus(STATUS.SUCCESS));
+      if (toastData) {
+        dispatch(
+          showToast({
+            message: toastData?.message,
+            severity: toastData?.severity,
+            image: toastData?.image,
+          })
+        );
+      }
+    },
+    onError: () => {
+      setTimeout(() => dispatch(setTxnStatus(STATUS.ERROR)), 10000);
+      // dispatch(setTxnStatus(STATUS.ERROR));
+      if (toastData) {
+        dispatch(
+          showToast({
+            message: 'Listing failed',
             severity: ToastSeverity.ERROR,
             image: toastData?.image,
           })
@@ -341,6 +381,7 @@ export const useGetTransaction = (txnHash: any, toastData?: toastOptions) => {
             link: `https://snowtrace.io/tx/${txnHash}`,
             image: toastData?.image,
             autoHideDuration: toastData?.autoHideDuration,
+            itemCount: toastData?.itemCount,
           })
         );
       }
@@ -353,6 +394,7 @@ export const useGetTransaction = (txnHash: any, toastData?: toastOptions) => {
             severity: ToastSeverity.ERROR,
             image: toastData?.image,
             autoHideDuration: toastData?.autoHideDuration,
+            itemCount: toastData?.itemCount,
           })
         );
       }

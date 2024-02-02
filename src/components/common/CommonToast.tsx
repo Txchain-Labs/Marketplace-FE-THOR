@@ -1,10 +1,17 @@
-import { Alert, Box, Snackbar, Typography, useMediaQuery } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { hideToast, ToastSeverity } from '../../redux/slices/toastSlice';
-import { ArrowForwardIos } from '@mui/icons-material';
-import Slide, { SlideProps } from '@mui/material/Slide';
-import theme from '../../theme';
 import { useEffect, useState } from 'react';
+import { hideToast } from '@/redux/slices/toastSlice';
+import {
+  Alert,
+  Box,
+  Snackbar,
+  Typography,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import { ArrowForwardIos } from '@mui/icons-material';
+import { palette } from '@/theme/palette';
 
 type TransitionProps = Omit<SlideProps, 'direction'>;
 
@@ -65,7 +72,6 @@ const CommonToast = () => {
       // Close an active snack when a new one is added
       setOpen(false);
     }
-    console.log(open);
   }, [snackPack, messageInfo, open]);
 
   const dispatch = useDispatch();
@@ -74,6 +80,7 @@ const CommonToast = () => {
     dispatch(hideToast());
     setOpen(false);
   };
+  const theme = useTheme();
   const bigScreen = useMediaQuery(theme.breakpoints.up('sm'));
 
   const handleClick = () => {
@@ -130,13 +137,28 @@ const CommonToast = () => {
                 backgroundSize: 'cover',
               }}
             >
-              {messageInfo?.itemCount > 0 && (
-                <Typography
-                  variant="p-sm"
-                  sx={{ display: 'inline-block', m: '0 auto 5px' }}
+              {messageInfo?.itemCount > 1 && (
+                <Box
+                  sx={{
+                    background:
+                      'linear-gradient(180deg, rgba(255, 255, 255, 0) -169.08%, rgba(0, 0, 0, 0.3) -47.91%)',
+                    padding: '4px 8px',
+                    width: '100%',
+                  }}
                 >
-                  {messageInfo?.itemCount} Items
-                </Typography>
+                  <Typography
+                    variant="p-sm"
+                    sx={{
+                      fontWeight: 700,
+                      color: palette.primary.light,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {messageInfo?.itemCount}
+                  </Typography>
+                </Box>
               )}
             </Box>
           }
@@ -146,8 +168,6 @@ const CommonToast = () => {
             'padding': '0px',
             'minWidth': '350px',
             'borderRadius': 0,
-            'background':
-              options?.severity === ToastSeverity.INFO ? 'black' : 'auto',
             '& .MuiAlert-icon': { padding: '0px !important', mr: 2 },
             '& .MuiAlert-message': {
               display: 'flex',

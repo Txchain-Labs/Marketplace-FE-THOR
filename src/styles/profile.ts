@@ -2,15 +2,33 @@ import { palette } from '../theme/palette';
 export const profile_0000 = {
   'flexGrow': 1,
   'bgcolor': 'background.paper',
-  'display': 'flex',
+  'display': 'block',
   'flexWrap': { sm: 'inherit', miniMobile: 'wrap' },
-  'pt': 10,
+  'p': 2,
   '& .MuiTabs-flexContainer': {
     alignItems: 'flex-start',
   },
   'minHeight': '100vh',
 };
-
+export const profile_nfts_artwork = {
+  fontSize: { sm: '56px', miniMobile: '40px' },
+  fontWeight: '700',
+  color: '#1A1A1A',
+  lineHeight: { sm: '85px', miniMobile: '61px' },
+};
+export const profile_mynfts_label = {
+  fontSize: { sm: '18px', miniMobile: '18px' },
+  fontWeight: { sm: '700' },
+  color: '#000000',
+  lineHeight: { sm: '27px', miniMobile: '27px' },
+};
+export const profile_mynfts_description = {
+  fontSize: { sm: '18px', miniMobile: '12px' },
+  fontWeight: { sm: '400', miniMobile: '300' },
+  color: '#4C4C4C',
+  width: { sm: '551px', miniMobile: '100%' },
+  lineHeight: { sm: '27px', miniMobile: '18px' },
+};
 export const tabSectionStyle = {
   display: 'flex',
   alignItems: 'flex-start',
@@ -36,7 +54,7 @@ export const tabStyle = {
 };
 
 export const profile_0001 = {
-  mt: { sm: '80px', miniMobile: '10px' },
+  mt: '15px',
   flexWrap: 'wrap',
   position: 'relative',
 };
@@ -91,6 +109,6 @@ export const menuItem = {
 };
 export const menuItemIcon = {
   color: palette.primary.storm,
-  width: '18.41px',
-  height: '18.41px',
+  // width: '18.41px',
+  // height: '18.41px',
 };

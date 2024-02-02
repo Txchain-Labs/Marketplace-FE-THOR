@@ -21,20 +21,20 @@ import {
 } from '../../redux/slices/cartSlice';
 import CartItem from './CartItem';
 import { useChain } from '../../utils/web3Utils';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BigNumberish, ethers } from 'ethers';
 import { useGetUsdFromAvax, useGetUsdFromThor } from '../../hooks/useOracle';
 import { formatNumber } from '../../utils/common';
 import BatchBuyNFTModal from '../modals/BatchBuyNFTModal';
+import { Listing } from '@/models/Listing';
 
-const StyledBadge = styled(Badge)<BadgeProps>(({ theme }) => ({
+const StyledBadge = styled(Badge)<BadgeProps>({
   '& .MuiBadge-badge': {
     right: -15,
     top: '50%',
-    border: `2px solid ${theme.palette.background.paper}`,
     padding: '0 6px',
   },
-}));
+});
 
 const CartDrawer = () => {
   const chain = useChain();
@@ -49,35 +49,37 @@ const CartDrawer = () => {
   const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
   const { data: thorPrice } = useGetUsdFromThor('1', chain);
 
-  const usdPriceById = useMemo(() => {
+  useEffect(() => {
     if (!carted) {
       return undefined;
     }
 
-    const map = new Map();
     let totalUsdPrice = 0;
-    carted.forEach((item: any) => {
+    carted.forEach((item: Listing) => {
       let usdPrice;
       if (item && item?.priceInWei) {
         usdPrice =
-          Number(ethers.utils.formatEther(item?.priceInWei)) *
+          Number(
+            item?.paymentType === '2'
+              ? ethers.utils.formatUnits(item?.priceInWei, 6)
+              : ethers.utils.formatEther(item?.priceInWei)
+          ) *
           (item?.paymentType === '0'
             ? avaxPrice
               ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
               : 0
-            : thorPrice
-            ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-            : 0);
+            : item?.paymentType === '1'
+            ? thorPrice
+              ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
+              : 0
+            : 1);
       } else {
         usdPrice = 0;
       }
       totalUsdPrice += usdPrice;
-      map.set(item?.id, usdPrice);
     });
 
     setTotalPrice(totalUsdPrice);
-
-    return map;
   }, [carted, avaxPrice, thorPrice]);
 
   const matches = useMediaQuery('(max-width:600px)');
@@ -110,6 +112,7 @@ const CartDrawer = () => {
         sx={{
           'zIndex': 10002,
           '& .MuiDrawer-paper': {
+            backgroundImage: 'none',
             boxSizing: 'border-box',
             width: matches ? '100%' : 375,
           },
@@ -159,12 +162,15 @@ const CartDrawer = () => {
           </Box>
         </Box>
         <Divider />
-        <List sx={{ flexGrow: 1, overflow: 'auto' }} disablePadding>
+        <List
+          sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'clip' }}
+          disablePadding
+        >
           {carted?.length === 0 ? (
             <Typography
               variant="lbl-md"
               sx={{
-                color: '#808080',
+                color: 'text.secondary',
                 padding: '20px',
                 textAlign: 'center',
                 lineHeight: '22px',
@@ -174,12 +180,8 @@ const CartDrawer = () => {
             </Typography>
           ) : (
             <>
-              {carted?.map((item: any) => (
-                <CartItem
-                  data={item}
-                  usdPrice={usdPriceById.get(item.id)}
-                  key={item.id}
-                />
+              {carted?.map((item: Listing) => (
+                <CartItem data={item} key={item.id} />
               ))}
             </>
           )}
@@ -215,10 +217,9 @@ const CartDrawer = () => {
             sx={{
               display: 'flex',
               borderRadius: '0%',
-              width: '100%',
-              maxWidth: '100%',
             }}
             variant="contained"
+            fullWidth
             onClick={handleBatchBuyModal}
           >
             <Typography variant="lbl-md">Complete purchase</Typography>
@@ -230,10 +231,7 @@ const CartDrawer = () => {
           open={isOpen}
           handleClose={handleClose}
           totalUsdPrice={totalPrice}
-          nfts={carted.map((cartedItem: any) => ({
-            ...cartedItem,
-            usdPrice: usdPriceById.get(cartedItem.id),
-          }))}
+          nfts={carted}
         />
       ) : (
         <></>

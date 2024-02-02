@@ -1,7 +1,7 @@
 import { red, blueGrey, grey } from '@mui/material/colors';
 
 const white = '#ffff';
-const black = '#181F3F';
+const black = 'rgba(26, 26, 26)';
 const darkBlack = '#090909';
 const lightBlack = '#rgba(0, 0, 0, 0.9)';
 const darkWhite = '#5b5b5b';
@@ -22,6 +22,8 @@ const sky = '#DEDFEB';
 const strike = '#E2E729';
 const bolt = '#F99D2A';
 const mediumCarmine = '#B63D2F';
+const lightParrot = '#47BA76';
+const semanticBlue = '#296EB4';
 
 // eslint-disable-next-line import/prefer-default-export
 export const palette = {
@@ -31,6 +33,7 @@ export const palette = {
   gray,
   yellow,
   darkBlack,
+  sky,
   // seaGreen,
 
   primary: {
@@ -48,6 +51,8 @@ export const palette = {
     ash,
     fire,
     mediumCarmine,
+    lightParrot,
+    semanticBlue,
   },
   secondary: {
     contrastText: white,
@@ -87,7 +92,7 @@ export const palette = {
   link: blue[800],
   icon: blueGrey[600],
   background: {
-    default: '#F4F6F8',
+    default: '#FFFFFF', //default: '#F4F6F8',
     paper: white,
   },
   divider: grey[200],

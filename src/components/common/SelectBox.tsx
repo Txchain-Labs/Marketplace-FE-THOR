@@ -21,7 +21,7 @@ const SelectBox = ({
       value={value}
       defaultValue={defaultValue}
       renderValue={(value: string | number) =>
-        options.find((item: any) => item.value === value)?.label
+        options.find((item: any) => item.value === value)?.text
       }
       size="small"
       inputProps={inputProps}
@@ -65,7 +65,7 @@ const SelectBox = ({
             variant="lbl-md"
             sx={{ lineHeight: '15px', alignSelf: 'flex-end' }}
           >
-            {option?.label}
+            {option?.text}
           </Typography>
           {defaultValue === option?.value && (
             <DoneIcon sx={{ width: '17.59px' }} />

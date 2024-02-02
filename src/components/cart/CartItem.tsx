@@ -7,40 +7,61 @@ import {
   Typography,
 } from '@mui/material';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
-import { useDispatch } from '../../redux/store';
-import { removeFromCart } from '../../redux/slices/cartSlice';
-import { useGetNodeRewards, useGetVrrLog } from '../../hooks/useNodes';
-import { formatWei } from '../../utils/web3Utils';
-import { formatNumber } from '../../utils/common';
+import { useDispatch, useSelector } from '@/redux/store';
+import { removeFromCart } from '@/redux/slices/cartSlice';
+import { useGetNodeRewards, useGetVrrLog } from '@/hooks/useNodes';
+import { formatWei, useChain } from '@/utils/web3Utils';
+import { formatNumber } from '@/utils/common';
+import { Listing } from '@/models/Listing';
+import { useGetUsdFromAvax, useGetUsdFromThor } from '@/hooks/useOracle';
 import { BigNumberish, ethers } from 'ethers';
+import { formatPriceByDefaultCurrency } from '@/utils/helper';
 
 interface CartItemProps {
-  data: any;
-  usdPrice: any;
+  data: Listing;
+  key: any;
 }
 
 const CartItem: FC<CartItemProps> = (props) => {
-  const { data, usdPrice } = props;
+  const { data, key } = props;
   const dispatch = useDispatch();
 
+  const chain = useChain();
+
+  const user = useSelector((state: any) => state?.auth.user);
+
   const { data: rewards } = useGetNodeRewards(
-    data.type !== 'ARTWORK' && data.nftAddress,
-    data.type !== 'ARTWORK' && data.tokenId,
-    data.type
+    data.assetsType === '1' && data.nodeType === '0' && data.nftAddress,
+    data.assetsType === '1' && data.nodeType === '0' && data.tokenId,
+    'ORIGIN'
   );
 
   const { data: vrrLog } = useGetVrrLog(
-    data.type !== 'ARTWORK' && data.nftAddress,
-    data.type !== 'ARTWORK' && data.tokenId,
-    data.type
+    data.assetsType === '1' && data.nodeType === '0' && data.nftAddress,
+    data.assetsType === '1' && data.nodeType === '0' && data.tokenId
   );
-
-  console.log('--- vrrLog: ---' + JSON.stringify(vrrLog));
 
   const formatedRewards = useMemo(
     () => (rewards ? formatWei(rewards as string, 18, 3) : '0'),
     [rewards]
   );
+
+  const { data: thorPrice } = useGetUsdFromThor('1', chain);
+  const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
+
+  const listingUSD = useMemo(() => {
+    if (data && (data as any).priceInWei) {
+      return formatPriceByDefaultCurrency(
+        (data as any)?.priceInWei,
+        (data as any)?.paymentType,
+        user?.default_currency,
+        avaxPrice,
+        thorPrice
+      );
+    } else {
+      return 0;
+    }
+  }, [thorPrice, avaxPrice, data, user?.default_currency]);
 
   const handleRemoveCart = (id: string) => {
     dispatch(removeFromCart(id));
@@ -48,13 +69,10 @@ const CartItem: FC<CartItemProps> = (props) => {
 
   return (
     <ListItem
+      key={key}
       divider
       sx={{
-        'alignItems': 'center',
-        '&:hover': {
-          backgroundColor: '#F8F8F8',
-          pr: 0,
-        },
+        'alignItems': 'flex-start',
         '&:hover .CartRemoveIcon': {
           display: 'block',
         },
@@ -73,7 +91,7 @@ const CartItem: FC<CartItemProps> = (props) => {
             }}
             variant={'lbl-lg'}
           >
-            {data.metadata?.name}
+            {data?.metadata.name}
           </Typography>
         }
         secondary={
@@ -92,11 +110,15 @@ const CartItem: FC<CartItemProps> = (props) => {
         sx={{ flexGrow: '0', textAlign: 'right' }}
         primary={
           <Typography sx={{ lineHeight: '28px' }} variant="lbl-lg">
-            {usdPrice ? formatNumber(usdPrice) : '----'} USD
+            {listingUSD ? formatNumber(listingUSD) : '----'}{' '}
+            {user?.default_currency
+              ? user?.default_currency.replace('USDC', 'USD')
+              : 'USD'}
           </Typography>
         }
         secondary={
-          data.type !== 'ARTWORK' && (
+          data.assetsType === '1' &&
+          data.nodeType === '0' && (
             <>
               <Typography
                 component="span"
@@ -111,7 +133,7 @@ const CartItem: FC<CartItemProps> = (props) => {
                       ethers.utils.formatEther(
                         (vrrLog as any).vrr as BigNumberish
                       )
-                    )
+                    ).toFixed(5)
                   : ''}{' '}
                 THOR PER DAY
               </Typography>
@@ -129,7 +151,7 @@ const CartItem: FC<CartItemProps> = (props) => {
           )
         }
       />
-      <Box sx={{ display: 'none' }} className="CartRemoveIcon">
+      <Box sx={{ pt: '18px', display: 'none' }} className="CartRemoveIcon">
         <IconButton
           onClick={() => handleRemoveCart(data.nftAddress + data.tokenId)}
         >

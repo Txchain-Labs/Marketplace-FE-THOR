@@ -1,17 +1,10 @@
 {
-  "include": [
-    "src",
-    "pages"
-  ],
+  "include": ["src", "pages"],
   "compilerOptions": {
     "jsx": "preserve",
     /* LANGUAGE COMPILATION OPTIONS */
     "target": "ESNext",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ES2020"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
@@ -21,7 +14,7 @@
     "removeComments": true,
     /* TYPE CHECKING RULES */
     "strict": true,
-    "strictNullChecks":false,
+    "strictNullChecks": false,
     "noFallthroughCasesInSwitch": false,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
@@ -37,9 +30,11 @@
     "useDefineForClassFields": true,
     "allowJs": true,
     "incremental": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

@@ -1,5 +1,6 @@
 export interface Nft {
   collection_address: string;
+  token_address?: string;
   token_id: string;
   name?: string;
   description?: string;
@@ -11,4 +12,5 @@ export interface Nft {
   is_synced?: boolean;
   img?: string;
   liked?: boolean;
+  metadataUrl?: string;
 }

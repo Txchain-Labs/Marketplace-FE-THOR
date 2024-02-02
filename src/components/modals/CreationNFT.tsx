@@ -151,8 +151,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   'border': '3px solid #000000',
                   'boxShadow': 'inset 0px -1.86785px 0px rgba(0, 0, 0, 0.25)',
                   'marginRight': '18px',
-                  'fontFamily': 'Nexa',
-                  'fontWeight': 700,
+                  'fontFamily': 'Nexa-Bold',
                   'lineHeight': '34px',
                 }}
                 component="label"
@@ -174,8 +173,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   height: '45px',
                   boxShadow: 'inset 0px -1.86785px 0px rgba(0, 0, 0, 0.25)',
                   marginRight: '18px',
-                  fontFamily: 'Nexa',
-                  fontWeight: 700,
+                  fontFamily: 'Nexa-Bold',
                   lineHeight: '34px',
                 }}
                 component="label"
@@ -228,11 +226,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                     ml: 2,
                   }}
                 >
-                  <Button
-                    variant="contained"
-                    sx={{ borderRadius: '0px' }}
-                    component="label"
-                  >
+                  <Button variant="contained" fullWidth component="label">
                     Add Image
                     <input
                       type="file"
@@ -386,7 +380,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   label="Short URL*"
                   variant="standard"
                 />
-                <Button variant="contained" type="submit">
+                <Button variant="contained" fullWidth type="submit">
                   Submit
                 </Button>
               </Box>

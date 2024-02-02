@@ -1,25 +1,26 @@
 import * as React from 'react';
 import {
-  Avatar,
-  Button,
-  /////  Divider,
   Menu,
   MenuItem,
+  IconButton,
   Typography,
+  Badge,
+  ThemeProvider,
+  useTheme,
 } from '@mui/material';
 import { Box } from '@mui/system';
-import Image from 'next/image';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FilteringOptions from './FilteringOptions';
+///// import MoreVertIcon from '@mui/icons-material/MoreVert';
+import FilterListIcon from '@mui/icons-material/FilterList';
+///// import FilteringOptions from './FilteringOptions';
+import ActivityFilterModal from './ActivityFilterModal';
+import ActivityElement from './ActivityElement';
 
-import { button, infoContainer, listWrapper, titleContainer } from './style';
-
-import { BigNumberish, ethers } from 'ethers';
+import { BigNumberish } from 'ethers';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 
 import { useGetActivities } from '../../../../hooks/useActivities';
-///// import { useRouter } from 'next/router';
+
 import {
   useGetUsdFromAvax,
   useGetUsdFromThor,
@@ -38,7 +39,13 @@ import { dottedAddress } from '../../../../shared/utils/utils';
 import { useChain } from '../../../../utils/web3Utils';
 import { formatNumber } from '../../../../utils/common';
 
-import CommonLoader from '../../../../components/common/CommonLoader';
+import { useDispatch } from '../../../../redux/store';
+
+import { SortMenu, CommonLoader, SearchField } from '@/components/common';
+import { SortOption, SortDirection } from '@/components/common/SortMenu';
+import { LastActivityPeriod } from '@/components/common/LastActivitySelect';
+import { selectSort, setSort } from '@/redux/slices/nftsSlice';
+import { ConnectWalletPage } from '@/components/common/ConnectWalletPage';
 
 import { initializeApp } from '@firebase/app';
 import {
@@ -50,212 +57,25 @@ import {
   updateDoc,
 } from '@firebase/firestore';
 
-import {
-  FirebaseConfig,
-  WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL,
-  WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS,
-} from '../../../../../src/utils/constants';
+import { FirebaseConfig } from '../../../../../src/utils/constants';
+
+import { isMobile } from 'react-device-detect';
+import EmptyState from '@/components/common/EmptyState';
+
 import { menu, menuItem } from '../../../../styles/profile';
+import { formatPriceByDefaultCurrency } from '@/utils/helper';
+import { useSearchFieldTheme } from '@/themes';
+// import { useRouter } from 'next/router';
 
 const firebaseApp = initializeApp(FirebaseConfig);
 const dbFirestore = getFirestore(firebaseApp);
 
 const listContainer = {
   width: '100%',
-  overflowX: 'scroll',
+  overflowX: 'auto',
   alignItems: 'center',
-  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-  p: '10px 0px',
+  padding: !isMobile ? '20px' : '20px',
 };
-const listItem = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-  p: '10px 0px',
-};
-const listWrapper2 = {
-  ...listWrapper,
-  width: '40.5vw',
-  minWidth: '200px',
-};
-
-const styleEventType = {
-  padding: '2px',
-  paddingTop: '6px',
-};
-
-const styleEventTypeButton = {
-  ...button,
-  marginTop: '-5px',
-};
-const styleEventTypeButton_Error = {
-  ...styleEventTypeButton,
-  color: 'var(--capsule-color-error)',
-  border: '1px solid var(--capsule-color-error)',
-};
-const styleEventTypeButton_Info = {
-  ...styleEventTypeButton,
-  color: 'var(--capsule-color-info)',
-  border: '1px solid var(--capsule-color-info)',
-};
-const styleEventTypeButton_Warning = {
-  ...styleEventTypeButton,
-  color: 'var(--capsule-color-warning)',
-  border: '1px solid var(--capsule-color-warning)',
-};
-const styleEventTypeButton_Success = {
-  ...styleEventTypeButton,
-  color: 'var(--capsule-color-success)',
-  border: '1px solid var(--capsule-color-success)',
-};
-
-const sxFilterOptionsSwitch = {
-  textAlign: 'right',
-  cursor: 'pointer',
-};
-
-const btn = {
-  // '&:hover': {
-  //   'clipPath':
-  //     'polygon(0 0, 92.5% 0, 100% 30%, 100% 100%, 7.5% 100%, 0% 70%, 0 0)',
-  //   'transition': ' clip-path 1s',
-  //   '&$btnWrapper': {
-  //     //opacity: 1,
-  //   },
-  // },
-  '&:active': {
-    boxShadow: 'inset rgba(0, 0, 0, 0.25) 0px 3px 0px',
-  },
-  'width': '100px',
-};
-
-// const data = [
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'from',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '11,024 items',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 minutes',
-//   },
-// ];
-
-// const activitiesData = [
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '7 seconds ago',
-//     expiry: '',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Bid',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '7 seconds ago',
-//     expiry: 'Expiring in 17 mins',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Transfer',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '20 mins ago',
-//     expiry: '',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Sold',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '30 mins ago',
-//     expiry: '',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '1 hour ago',
-//     expiry: '',
-//   },
-//   {
-//     title: 'DeadFrenz',
-//     btnText: 'Listing',
-//     from: 'From',
-//     fromSpan: 'jungle75',
-//     to: 'to',
-//     toSpan: '0x0123...a289',
-//     date: '2 days ago',
-//     expiry: '',
-//   },
-// ];
-
 const initialLocalStorageData = [
   {
     key: 'initialized',
@@ -874,9 +694,33 @@ const initialLocalStorageData = [
   },
 ];
 
-interface ChildProps {
-  change: any;
-}
+const sortOptions: SortOption[] = [
+  {
+    label: 'Price',
+    directionLabels: { desc: 'High to low', asc: 'Low to high' },
+    directions: ['desc', 'asc'],
+    field: 'price',
+  },
+  {
+    label: 'Updated',
+    directionLabels: {
+      desc: 'Latest to Oldest',
+      asc: 'Oldest to Latest',
+    },
+    directions: ['desc', 'asc'],
+    field: 'updatedAt',
+  },
+  {
+    label: 'NFT name',
+    directionLabels: { desc: 'Descending', asc: 'Ascending' },
+    directions: ['desc', 'asc'],
+    field: 'title',
+  },
+];
+
+///// interface ChildProps {
+/////   change: any;
+///// }
 
 const funcSecsElapsed = (unixSecondFrom: number) => {
   return Date.now() / 1000 - unixSecondFrom;
@@ -920,30 +764,77 @@ const expireWhen = (unixSecondFrom: number) => {
 const applyFilters = (
   setActivitiesData: any,
   filterOptions: any,
-  unFilteredActivitiesData: any
+  unFilteredActivitiesData: any,
+  searchKeyWords: string,
+  sortBy: string,
+  sortDirection: string
 ) => {
-  const filteredArr = unFilteredActivitiesData.filter(
+  const filteredButUnsortedArr = unFilteredActivitiesData.filter(
     (value: any) =>
-      ((filterOptions.statusListing && value.btnText === 'Listed') ||
-        (filterOptions.statusListing && value.btnText === 'UnListed') ||
-        (filterOptions.statusBid && value.btnText === 'Received Bid') ||
-        (filterOptions.statusBid && value.btnText === 'Received Private Bid') ||
-        (filterOptions.statusBid && value.btnText === 'Sent Bid') ||
-        (filterOptions.statusBid && value.btnText === 'Sent Private Bid') ||
-        (filterOptions.statusTransfer && value.btnText === 'Transfer') ||
-        (filterOptions.statusSold && value.btnText === 'Bought') ||
-        (filterOptions.statusSold && value.btnText === 'Sold')) &&
-      ((filterOptions.lastActivity24hours &&
+      ((filterOptions.listed && value.btnText === 'Listed') ||
+        (filterOptions.unlisted && value.btnText === 'UnListed') ||
+        (filterOptions.listed && value.btnText === 'Edited List') ||
+        (filterOptions.bidReceived && value.btnText === 'Received Bid') ||
+        (filterOptions.bidReceived &&
+          value.btnText === 'Received Private Bid') ||
+        (filterOptions.bidSent && value.btnText === 'Sent Bid') ||
+        (filterOptions.bidSent && value.btnText === 'Sent Private Bid') ||
+        (filterOptions.bidReceived &&
+          value.btnText === 'Removed Private Bid') ||
+        (filterOptions.bidReceived && value.btnText === 'Removed Bid') ||
+        (filterOptions.bidReceived &&
+          value.btnText === 'Expired Private Bid') ||
+        (filterOptions.bidReceived && value.btnText === 'Expired Bid') ||
+        (filterOptions.transfer && value.btnText === 'Transfer') ||
+        (filterOptions.bought && value.btnText === 'Bought') ||
+        (filterOptions.sold && value.btnText === 'Sold')) &&
+      ((filterOptions.lastActivity === LastActivityPeriod.lastActivity24hours &&
         funcSecsElapsed(value.updatedAt) <= 24 * 3600) ||
-        (filterOptions.lastActivityWeek &&
+        (filterOptions.lastActivity === LastActivityPeriod.lastActivityWeek &&
           funcSecsElapsed(value.updatedAt) <= 7 * 24 * 3600) ||
-        (filterOptions.lastActivity30days &&
+        (filterOptions.lastActivity === LastActivityPeriod.lastActivity30days &&
           funcSecsElapsed(value.updatedAt) <= 30 * 24 * 3600) ||
-        (filterOptions.lastActivityYear &&
-          funcSecsElapsed(value.updatedAt) <= 366 * 3600))
+        (filterOptions.lastActivity === LastActivityPeriod.lastActivityYear &&
+          funcSecsElapsed(value.updatedAt) <= 366 * 3600)) &&
+      (searchKeyWords.trim() === '' ||
+        value.title.toLowerCase().includes(searchKeyWords) ||
+        value.btnText.toLowerCase().includes(searchKeyWords) ||
+        value.fromSpan.toLowerCase().includes(searchKeyWords) ||
+        value.toSpan.toLowerCase().includes(searchKeyWords) ||
+        value.value.toLowerCase().includes(searchKeyWords))
   );
 
-  setActivitiesData(filteredArr);
+  let filteredAndSortedArr = filteredButUnsortedArr;
+
+  if (sortBy === 'price') {
+    filteredAndSortedArr = filteredButUnsortedArr.sort(
+      (first: any, second: any) =>
+        (sortDirection === 'asc' && second.value === ' -- ') ||
+        (sortDirection === 'desc' && first.value === ' -- ') ||
+        (sortDirection === 'asc' && first.value > second.value) ||
+        (sortDirection === 'desc' && first.value < second.value)
+          ? 1
+          : -1
+    );
+  } else if (sortBy === 'updatedAt') {
+    filteredAndSortedArr = filteredButUnsortedArr.sort(
+      (first: any, second: any) =>
+        (sortDirection === 'asc' && first.updatedAt > second.updatedAt) ||
+        (sortDirection === 'desc' && first.updatedAt < second.updatedAt)
+          ? 1
+          : -1
+    );
+  } else if (sortBy === 'title') {
+    filteredAndSortedArr = filteredButUnsortedArr.sort(
+      (first: any, second: any) =>
+        (sortDirection === 'asc' && first.title > second.title) ||
+        (sortDirection === 'desc' && first.title < second.title)
+          ? 1
+          : -1
+    );
+  }
+
+  setActivitiesData(filteredAndSortedArr);
 
   // const lstrg = [];
   // for (let i = 0; i < localStorage.length; i++) {
@@ -955,7 +846,14 @@ const applyFilters = (
   // console.log('--- local storage: ' + JSON.stringify(lstrg));
 };
 
-const Activity = ({ change }: ChildProps) => {
+const emptyActivities: any[] = [];
+
+///// const Activity = ({ change }: ChildProps) => {
+const Activity = () => {
+  const theme = useTheme();
+
+  const searchFieldTheme = useSearchFieldTheme(theme);
+
   React.useEffect(() => {
     if (!localStorage.getItem('initialized')) {
       for (let i = 0; i < initialLocalStorageData.length; i++) {
@@ -973,9 +871,9 @@ const Activity = ({ change }: ChildProps) => {
   const handleClose = () => {
     setAnchorEl(null);
   };
-  const handleClick = (event: any) => {
-    setAnchorEl(event.currentTarget);
-  };
+  // const handleClick = (event: any) => {
+  //   setAnchorEl(event.currentTarget);
+  // };
 
   const user = useSelector((state: any) => state?.auth?.user);
   const [unFilteredActivitiesData, setUnFilteredActivitiesData] =
@@ -986,21 +884,30 @@ const Activity = ({ change }: ChildProps) => {
   const [activitiesData, setActivitiesData] = React.useState([]);
   const [fetching, setFetching] = React.useState(true);
   const [filterOptions, setFilterOptions] = React.useState({
-    statusListing: true,
-    statusTransfer: true,
-    statusBid: true,
-    statusSold: true,
-    lastActivity24hours: true,
-    lastActivityWeek: true,
-    lastActivity30days: true,
-    lastActivityYear: true,
-    dateRangeFrom: new Date(2022, 0, 1),
-    dateRangeTo: new Date(),
+    listed: true,
+    unlisted: true,
+    bidReceived: true,
+    bidSent: true,
+    bought: true,
+    sold: true,
+    transfer: true,
+    lastActivity: LastActivityPeriod.lastActivity30days,
+
+    // statusListing: true,
+    // statusTransfer: true,
+    // statusBid: true,
+    // statusSold: true,
+    // lastActivity24hours: true,
+    // lastActivityWeek: true,
+    // lastActivity30days: true,
+    // lastActivityYear: true,
+    // dateRangeFrom: new Date(2022, 0, 1),
+    // dateRangeTo: new Date(),
   });
   const [filterOptionsSwitch, setFilterOptionsSwitch] = React.useState(false);
 
   const chain = useChain();
-  ///// const router = useRouter();
+  // const router = useRouter();
 
   const { data: avaxPrice } = useGetUsdFromAvax('1', chain);
   const { data: thorPrice } = useGetUsdFromThor('1', chain);
@@ -1008,31 +915,19 @@ const Activity = ({ change }: ChildProps) => {
   const formatedPrice = React.useCallback(
     (priceInWei: BigNumberish, paymentType: string) => {
       if (priceInWei) {
-        return (
-          Number(ethers.utils.formatEther(priceInWei)) *
-          (paymentType === '0'
-            ? avaxPrice
-              ? Number(ethers.utils.formatEther(avaxPrice as BigNumberish))
-              : 0
-            : thorPrice
-            ? Number(ethers.utils.formatEther(thorPrice as BigNumberish))
-            : 0)
+        return formatPriceByDefaultCurrency(
+          priceInWei,
+          paymentType,
+          user?.default_currency,
+          avaxPrice,
+          thorPrice
         );
       } else {
         return 0;
       }
     },
-    [avaxPrice, thorPrice]
+    [avaxPrice, thorPrice, user?.default_currency]
   );
-
-  const [width, setWidth] = React.useState(window.innerWidth);
-  const updateDimensions = () => {
-    setWidth(window.innerWidth);
-  };
-  React.useEffect(() => {
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
 
   const fetchNFTDetail = async (
     chainId: number,
@@ -1108,15 +1003,6 @@ const Activity = ({ change }: ChildProps) => {
     [chain?.id]
   );
 
-  const imageURL = (url: string) => {
-    if (url.startsWith('ipfs://'))
-      url = url.replace('ipfs://', 'ipfs.io/ipfs/');
-    if (!url.startsWith('https://') && !url.startsWith('http://'))
-      url = 'https://' + url;
-
-    return url;
-  };
-
   const getDisplayUserName = async (address: string) => {
     const savedData = localStorage.getItem(address);
     if (savedData) {
@@ -1152,7 +1038,8 @@ const Activity = ({ change }: ChildProps) => {
         const funcConvertActivity = async function (eachActivity: any) {
           if (
             eachActivity.status === 'LIST' ||
-            eachActivity.status === 'UNLIST'
+            eachActivity.status === 'UNLIST' ||
+            eachActivity.status === 'EDIT_LISTING'
           ) {
             const floorPriceAvax = await funcGetFloorPriceAvax(
               eachActivity.nftAddress.toLowerCase(),
@@ -1171,7 +1058,12 @@ const Activity = ({ change }: ChildProps) => {
               tokenId: eachActivity.tokenId,
 
               title: 'untitled',
-              btnText: eachActivity.status === 'LIST' ? 'Listed' : 'UnListed',
+              btnText:
+                eachActivity.status === 'LIST'
+                  ? 'Listed'
+                  : eachActivity.status === 'UNLIST'
+                  ? 'UnListed'
+                  : 'Edited List',
               from: 'From',
               // fromSpan:
               //   eachActivity.user.toLowerCase() == user?.address.toLowerCase()
@@ -1181,6 +1073,8 @@ const Activity = ({ change }: ChildProps) => {
               fromSpan: await getDisplayUserName(eachActivity.user),
               to: 'to',
               toSpan: await getDisplayUserName(eachActivity.to),
+              fromAddr: `/profile/${eachActivity.user}`,
+              toAddr: `/profile/${eachActivity.to}`,
               updatedAt: Number(eachActivity.updatedAt),
               date: timeElapsed(Number(eachActivity.updatedAt)),
               expiry: '',
@@ -1207,6 +1101,7 @@ const Activity = ({ change }: ChildProps) => {
               link: `/nft/${eachActivity.nftAddress.toLowerCase()}/${
                 eachActivity.tokenId
               }`,
+              txHash: eachActivity.transactionHash,
               img: '',
             });
           } else if (eachActivity.status === 'BID') {
@@ -1246,6 +1141,8 @@ const Activity = ({ change }: ChildProps) => {
                         fromSpan: await getDisplayUserName(eachBid.bidder),
                         to: 'to',
                         toSpan: await getDisplayUserName(eachActivity.user),
+                        fromAddr: `/profile/${eachBid.bidder}`,
+                        toAddr: `/profile/${eachActivity.user}`,
                         updatedAt: Number(eachActivity.updatedAt),
                         date: timeElapsed(Number(eachActivity.updatedAt)),
                         expiry: expireWhen(Number(eachBid.expiresAt)),
@@ -1259,6 +1156,7 @@ const Activity = ({ change }: ChildProps) => {
                         link: `/nft/${eachActivity.nftAddress.toLowerCase()}/${
                           eachActivity.tokenId
                         }`,
+                        txHash: eachActivity.transactionHash,
                         img: '',
                       });
 
@@ -1289,19 +1187,22 @@ const Activity = ({ change }: ChildProps) => {
                   fromSpan: await getDisplayUserName(eachActivity.to),
                   to: 'to',
                   toSpan: await getDisplayUserName(eachActivity.user),
+                  fromAddr: `/profile/${eachActivity.to}`,
+                  toAddr: `/profile/${eachActivity.user}`,
                   updatedAt: Number(eachActivity.updatedAt),
                   date: timeElapsed(Number(eachActivity.updatedAt)),
                   expiry: expireWhen(Number(bids.data.data.bids[0].expiresAt)),
                   value: formatNumber(
                     formatedPrice(
                       bids.data.data.bids[0].priceInWei,
-                      eachActivity.paymentType
+                      bids.data.data.bids[0].paymentType
                     )
                   ),
                   description: '',
                   link: `/nft/${eachActivity.nftAddress.toLowerCase()}/${
                     eachActivity.tokenId
                   }`,
+                  txHash: eachActivity.transactionHash,
                   img: '',
                 });
             }
@@ -1324,6 +1225,8 @@ const Activity = ({ change }: ChildProps) => {
               fromSpan: await getDisplayUserName(eachActivity.user),
               to: 'to',
               toSpan: await getDisplayUserName(eachActivity.to),
+              fromAddr: `/profile/${eachActivity.user}`,
+              toAddr: `/profile/${eachActivity.to}`,
               updatedAt: Number(eachActivity.updatedAt),
               date: timeElapsed(Number(eachActivity.updatedAt)),
               expiry: '',
@@ -1339,6 +1242,50 @@ const Activity = ({ change }: ChildProps) => {
               link: `/nft/${eachActivity.nftAddress.toLowerCase()}/${
                 eachActivity.tokenId
               }`,
+              txHash: eachActivity.transactionHash,
+              img: '',
+            });
+          } else if (
+            eachActivity.status === 'BID_REMOVED' ||
+            eachActivity.status === 'OTCBID_REMOVED'
+          ) {
+            listActivitiesData.push({
+              nftAddress: eachActivity.nftAddress.toLowerCase(),
+              tokenId: eachActivity.tokenId,
+
+              title: 'untitled',
+              btnText:
+                eachActivity.status === 'BID_REMOVED'
+                  ? eachActivity.user.toLowerCase() ===
+                    user?.address.toLowerCase()
+                    ? 'Expired Bid'
+                    : 'Removed Bid'
+                  : eachActivity.user.toLowerCase() ===
+                    user?.address.toLowerCase()
+                  ? 'Expired Private Bid'
+                  : 'Removed Private Bid',
+              from: 'From',
+              fromSpan: await getDisplayUserName(eachActivity.user),
+              to: 'to',
+              toSpan: await getDisplayUserName(eachActivity.to),
+              fromAddr: `/profile/${eachActivity.user}`,
+              toAddr: `/profile/${eachActivity.to}`,
+              updatedAt: Number(eachActivity.updatedAt),
+              date: timeElapsed(Number(eachActivity.updatedAt)),
+              expiry: '',
+              value: eachActivity.priceInWei
+                ? formatNumber(
+                    formatedPrice(
+                      eachActivity.priceInWei,
+                      eachActivity.paymentType
+                    )
+                  )
+                : ' -- ',
+              description: '',
+              link: `/nft/${eachActivity.nftAddress.toLowerCase()}/${
+                eachActivity.tokenId
+              }`,
+              txHash: eachActivity.transactionHash,
               img: '',
             });
           }
@@ -1405,17 +1352,74 @@ const Activity = ({ change }: ChildProps) => {
     [chain, user?.address, formatedPrice, fetchMetadataByNfts]
   );
 
-  const { data: rawActivitiesData } = useGetActivities(user?.address, 250);
+  const { data: _rawActivitiesData } = useGetActivities(
+    user?.address ? user?.address : '',
+    250
+  );
+
+  const rawActivitiesData = React.useMemo(() => {
+    return user?.address
+      ? _rawActivitiesData
+      : {
+          data: {
+            data: { data: { activities: emptyActivities } },
+          },
+        };
+  }, [user?.address, _rawActivitiesData]);
 
   React.useEffect(() => {
     console.log('fetch');
     fetchActivitiesData(rawActivitiesData);
   }, [rawActivitiesData, fetchActivitiesData]);
 
+  const [searchKeyWords, setSearchKeyWords] = React.useState('');
+  const [sortBy, setSortBy] = React.useState('');
+  const [sortDirection, setSortDirection] = React.useState('');
+  const [isFilterApplied, setIsFilterApplied] = React.useState(
+    !(
+      filterOptions.listed &&
+      filterOptions.unlisted &&
+      filterOptions.bidReceived &&
+      filterOptions.bidSent &&
+      filterOptions.bought &&
+      filterOptions.sold &&
+      filterOptions.transfer &&
+      filterOptions.lastActivity === LastActivityPeriod.lastActivity30days
+    )
+  );
   React.useEffect(() => {
-    applyFilters(setActivitiesData, filterOptions, unFilteredActivitiesData);
+    applyFilters(
+      setActivitiesData,
+      filterOptions,
+      unFilteredActivitiesData,
+      searchKeyWords,
+      sortBy,
+      sortDirection
+    );
+    if (
+      !(
+        filterOptions.listed &&
+        filterOptions.unlisted &&
+        filterOptions.bidReceived &&
+        filterOptions.bidSent &&
+        filterOptions.bought &&
+        filterOptions.sold &&
+        filterOptions.transfer &&
+        filterOptions.lastActivity === LastActivityPeriod.lastActivity30days
+      )
+    ) {
+      setIsFilterApplied(true);
+    } else {
+      setIsFilterApplied(false);
+    }
     console.log('filter');
-  }, [filterOptions, unFilteredActivitiesData]);
+  }, [
+    filterOptions,
+    unFilteredActivitiesData,
+    searchKeyWords,
+    sortBy,
+    sortDirection,
+  ]);
 
   // React.useEffect(() => {
   //   let tempActivitiesData = [];
@@ -1448,7 +1452,7 @@ const Activity = ({ change }: ChildProps) => {
 
   React.useEffect(() => {
     ///// read activities
-    if (user.address) {
+    if (user?.address) {
       ///// console.log('user.address' + user.address);
       getDocs(
         query(
@@ -1465,295 +1469,195 @@ const Activity = ({ change }: ChildProps) => {
         });
       });
     }
-  }, [fetchActivitiesData, user.address]);
+  }, [fetchActivitiesData, user?.address]);
+
+  const sort = useSelector(selectSort);
+
+  const onChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => {
+    const searchkey = event.target.value;
+    setSearchKeyWords(searchkey.toLowerCase());
+  };
+
+  const dispatch = useDispatch();
+
+  const onSortChange = (orderBy: string, orderDirection: SortDirection) => {
+    dispatch(setSort({ orderBy, orderDirection }));
+
+    setSortBy(orderBy);
+    setSortDirection(orderDirection);
+  };
 
   return (
     <>
-      <Box
-        sx={{
-          display: { md: 'none', miniMobile: 'flex' },
-          flexDirection: 'row-reverse',
-        }}
-      >
-        {' '}
-        <MoreVertIcon sx={{ cursor: 'pointer' }} onClick={handleClick} />{' '}
-      </Box>
-
-      <Box
-        mt="2.6px"
-        sx={{
-          ...sxFilterOptionsSwitch,
-          marginRight:
-            width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL / 2
-              ? '0'
-              : '10px',
-        }}
-      >
-        <Image
-          height={20}
-          width={24}
-          src="/images/flex-icon.svg"
-          onClick={() => {
-            setFilterOptionsSwitch(true);
+      <Box>
+        <Typography
+          sx={{
+            padding: '20px',
+            fontSize: isMobile ? '36px' : '48px',
+            fontFamily: 'Nexa-Bold',
           }}
-        />
+        >
+          Activity
+        </Typography>
       </Box>
 
-      {/* <Divider sx={{ borderColor: 'rgba(0, 0, 0, 0.3)' }} /> */}
-
-      <FilteringOptions
-        filterOptions={filterOptions}
-        setFilterOptions={setFilterOptions}
-        filterOptionsSwitch={filterOptionsSwitch}
-        setFilterOptionsSwitch={setFilterOptionsSwitch}
-      />
+      <Box
+        sx={(theme) => ({
+          px: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          [theme.breakpoints.down('sm')]: {
+            flexDirection: 'column',
+          },
+        })}
+      >
+        <Box
+          sx={(theme) => ({
+            [theme.breakpoints.down('sm')]: {
+              mb: '8px',
+            },
+          })}
+        >
+          <ThemeProvider theme={searchFieldTheme}>
+            <SearchField
+              placeholder={'Search NFTs'}
+              fullWidth
+              value={searchKeyWords}
+              onChange={onChange}
+              onClear={() => {
+                setSearchKeyWords('');
+              }}
+            />
+          </ThemeProvider>
+        </Box>
+        <Box
+          display={'flex'}
+          justifyContent={'space-between'}
+          alignItems={'center'}
+        >
+          <SortMenu
+            sortOptions={sortOptions}
+            selectedField={sort.orderBy}
+            direction={sort.orderDirection}
+            onChange={onSortChange}
+          />
+          <IconButton
+            sx={{ position: 'relative' }}
+            onClick={() => {
+              setFilterOptionsSwitch(true);
+            }}
+          >
+            <Badge
+              color={'primary'}
+              variant={'dot'}
+              invisible={
+                filterOptions.listed &&
+                filterOptions.unlisted &&
+                filterOptions.bidReceived &&
+                filterOptions.bidSent &&
+                filterOptions.bought &&
+                filterOptions.sold &&
+                filterOptions.transfer &&
+                filterOptions.lastActivity ===
+                  LastActivityPeriod.lastActivity30days
+              }
+            >
+              <FilterListIcon />
+            </Badge>
+          </IconButton>
+        </Box>
+      </Box>
 
       <Box sx={listContainer}>
-        {fetching ? (
-          <CommonLoader
-            size={undefined}
-            width={'70vw'}
-            height={'55vh'}
-            text={'Loading Activities...'}
-          />
-        ) : (
-          activitiesData.map((item, index) => (
-            <Box
-              sx={{
-                ...listItem,
-                display:
-                  width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                    ? 'flex'
-                    : 'table-row-group',
-              }}
-              key={index}
-            >
-              <Box
-                sx={{
-                  ...listWrapper2,
-                  width:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '40.5vw'
-                      : '90vw',
-                }}
-              >
-                <Avatar
-                  src={imageURL(item.img)}
-                  sx={{ mr: 2, height: '63px', width: '63px' }}
-                />
-                <Box>
-                  <Box sx={titleContainer}>
-                    <Typography variant="p-lg">{item.title}</Typography>
-                    <Box
-                      sx={
-                        item.btnText === 'Listed' ||
-                        item.btnText === 'Received Bid' ||
-                        item.btnText === 'Sent Bid' ||
-                        item.btnText === 'Received Private Bid' ||
-                        item.btnText === 'Sent Private Bid' ||
-                        item.btnText === 'Bought' ||
-                        item.btnText === 'Sold' ||
-                        item.btnText === 'Transfer'
-                          ? styleEventTypeButton_Success
-                          : item.btnText === 'UnListed' ||
-                            item.btnText === 'Removed Bid'
-                          ? styleEventTypeButton_Error
-                          : item.btnText === 'Edited List'
-                          ? styleEventTypeButton_Info
-                          : item.btnText === 'Bid Expired'
-                          ? styleEventTypeButton_Warning
-                          : styleEventTypeButton
-                      }
-                    >
-                      <Typography
-                        fontWeight={700}
-                        sx={styleEventType}
-                        variant="lbl-sm"
-                      >
-                        {item.btnText}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={infoContainer}>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{
-                        marginRight: '10px',
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        display:
-                          width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL
-                            ? 'initial'
-                            : 'none',
-                      }}
-                    >
-                      {item.from}
-                    </Typography>
-                    <Typography
-                      variant="p-lg"
-                      sx={{ display: 'inline', marginRight: '10px' }}
-                    >
-                      {' '}
-                      {item.fromSpan}
-                    </Typography>
-
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{ marginRight: '10px', color: 'rgba(0, 0, 0, 0.6)' }}
-                    >
-                      {item.to}
-                    </Typography>
-                    <Typography
-                      variant="p-lg"
-                      sx={{ display: 'inline', marginRight: '6px' }}
-                    >
-                      {' '}
-                      {item.toSpan}
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{
-                        marginRight: '16px',
-                        marginLeft: '16px',
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        display:
-                          width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL
-                            ? 'initial'
-                            : 'none',
-                      }}
-                    >
-                      {item.date}
-                    </Typography>
-                    <Typography
-                      variant="p-lg-bk"
-                      sx={{
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        display:
-                          width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL
-                            ? 'initial'
-                            : 'none',
-                      }}
-                    >
-                      {item.expiry}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-              <Box
-                display={'flex'}
-                flexDirection={'column'}
-                alignItems={
-                  width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                    ? 'flex-end'
-                    : 'flex-start'
-                }
-                sx={{
-                  marginTop:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '5px'
-                      : '25px',
-                  minWidth: '100px',
-                  marginLeft:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '0'
-                      : '10vw',
-                }}
-                className="tooltip"
-              >
-                <Box display={'flex'} alignItems="center">
-                  {/* <img src="/images/rectangle-icon.png" /> */}
-                  {item.value !== ' -- ' ? (
-                    <Typography variant="p-lg">$ {item.value} USD</Typography>
-                  ) : (
-                    <Typography variant="p-lg">{item.value}</Typography>
-                  )}
-                </Box>
-                {item.description !== '' ? (
-                  <Typography
-                    variant="p-lg-bk"
-                    mt={1}
-                    sx={{ color: 'rgba(0, 0, 0, 0.6)' }}
-                    className="tooltiptext"
-                  >
-                    {item.description}
-                  </Typography>
-                ) : (
-                  <></>
-                )}
-              </Box>
-              <Box
-                sx={{
-                  minWidth: '100px',
-                  marginRight:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '0'
-                      : width >
-                        WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS / 2
-                      ? '25vw'
-                      : '5vw',
-                  marginTop:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '0'
-                      : '-30px',
-                  marginBottom:
-                    width > WIDTH_THRESHOLD_4_RESPONSIVE_ACTIVITYPANEL_TWO_ROWS
-                      ? '0'
-                      : '30px',
-                }}
-                display={'flex'}
-                flexDirection={'column'}
-                alignItems="flex-end"
-              >
-                <Box display={'flex'} alignItems="center">
-                  <Button
-                    variant="activity_view"
-                    sx={btn}
-                    onClick={() => {
-                      ///// console.log('----- LINK: ' + item.link);
-                      ///// router.push(item.link);
-                      window.location.href = item.link; // router.push(...) doesn't work
-                    }}
-                  >
-                    {item.btnText === 'Received Bid' ||
-                    item.btnText === 'Sent Bid' ||
-                    item.btnText === 'Received Private Bid' ||
-                    item.btnText === 'Sent Private Bid'
-                      ? 'Open'
-                      : 'View'}
-                  </Button>
-                </Box>
-              </Box>
-
-              <Menu
-                sx={{ ...menu, marginLeft: '-25px' }}
-                id="demo-positioned-menu"
-                aria-labelledby="demo-positioned-button"
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleClose}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'left',
-                }}
-                elevation={0}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'left',
-                }}
-              >
-                <MenuItem
-                  sx={menuItem}
-                  // sx={{ display: { sm: 'none', miniMobile: 'block' } }}
-                  onClick={(e) => {
-                    change(e, 1);
-                  }}
-                >
-                  Profile
-                </MenuItem>
-              </Menu>
+        {user?.address ? (
+          fetching ? (
+            <CommonLoader
+              size={undefined}
+              width={'88vw'}
+              height={'90vh'}
+              mb={'30vh'}
+              text={'Loading Activities...'}
+            />
+          ) : activitiesData.length > 0 ? (
+            activitiesData.map((item, index) => (
+              <ActivityElement item={item} key={index} />
+            ))
+          ) : (isFilterApplied || searchKeyWords.length) &&
+            activitiesData?.length <= 0 ? (
+            <Box sx={{ height: '72vh' }}>
+              <EmptyState type={isFilterApplied ? 'filter' : 'search'} />
             </Box>
-          ))
+          ) : (
+            <Box
+              sx={{ width: '100%', textAlign: 'center', paddingTop: '15vh' }}
+            >
+              <svg
+                width="49"
+                height="37"
+                viewBox="0 0 49 37"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18.3683 22.5116C16.3078 22.5116 14.6322 20.8468 14.6322 18.8C14.6322 16.7532 16.3078 15.0885 18.3683 15.0885H40.755V10.7219H18.3683C13.9008 10.7219 10.2656 14.3462 10.2656 18.8C10.2656 23.2539 13.9008 26.8781 18.3683 26.8781H48.3691V22.5116H18.3683Z"
+                  fill="#808080"
+                />
+                <path
+                  d="M18.3394 0.825928C8.43008 0.825928 0.371094 8.85763 0.371094 18.7287C0.371094 28.5998 8.43008 36.6315 18.3394 36.6315H48.2993V32.265H18.3394C10.8399 32.265 4.73763 26.1928 4.73763 18.7287C4.73763 11.2647 10.8399 5.19247 18.3394 5.19247H48.2993V0.825928H18.3394Z"
+                  fill="#808080"
+                />
+                <path
+                  d="M45.7778 10.7219C44.4909 10.7219 43.4492 11.7636 43.4492 13.0505C43.4492 14.3375 44.4909 15.3791 45.7778 15.3791C47.0647 15.3791 48.1064 14.3375 48.1064 13.0505C48.1064 11.7636 47.0647 10.7219 45.7778 10.7219Z"
+                  fill="#808080"
+                />
+              </svg>
+              <Typography sx={{ marginTop: '10px' }}>
+                No activity yet
+              </Typography>
+            </Box>
+          )
+        ) : (
+          <ConnectWalletPage page="activity" />
         )}
       </Box>
+
+      <ActivityFilterModal
+        setFilterOptions={setFilterOptions}
+        isOpen={filterOptionsSwitch}
+        onClose={() => {
+          setFilterOptionsSwitch(false);
+        }}
+      />
+
+      <Menu
+        sx={{ ...menu, marginLeft: '-25px' }}
+        id="demo-positioned-menu"
+        aria-labelledby="demo-positioned-button"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        elevation={0}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <MenuItem
+          sx={menuItem}
+          // sx={{ display: { sm: 'none', miniMobile: 'block' } }}
+          ///// onClick={(e) => {
+          /////   change(e, 1);
+          ///// }}
+        >
+          Profile
+        </MenuItem>
+      </Menu>
     </>
   );
 };

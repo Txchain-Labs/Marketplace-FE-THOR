@@ -68,6 +68,25 @@
     "inputs": [
       {
         "indexed": false,
+        "internalType": "bytes32",
+        "name": "id",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CancelByTopBid",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "internalType": "uint256",
         "name": "id",
         "type": "uint256"
@@ -401,32 +420,6 @@
     "type": "event"
   },
   {
-    "inputs": [],
-    "name": "_orderIds",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "_otcBidsIds",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -460,6 +453,123 @@
     "name": "acceptOtcBid",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "acceptPayment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_nftAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_tokensId",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "areNFTListed",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "orderId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "saleType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "paymentType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "activeBid",
+            "type": "bool"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "id",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "address",
+                "name": "bidder",
+                "type": "address"
+              },
+              {
+                "internalType": "uint8",
+                "name": "paymentType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "price",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "expiresAt",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct IMarketplace.Bid[]",
+            "name": "bidOffer",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct Marketplace.ListedNFT[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -545,157 +655,19 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_nftAddress",
-        "type": "address"
+        "internalType": "address[]",
+        "name": "_nftAddresses",
+        "type": "address[]"
       },
       {
-        "internalType": "uint256",
-        "name": "_tokenId",
-        "type": "uint256"
+        "internalType": "uint256[]",
+        "name": "_tokenIds",
+        "type": "uint256[]"
       }
     ],
     "name": "delistNFT",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "idToOrder",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "saleType",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint8",
-        "name": "paymentType",
-        "type": "uint8"
-      },
-      {
-        "internalType": "address payable",
-        "name": "seller",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "unusedVariable1",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "nftAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unusedVariable3",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "expiresAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "unusedVariable4",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "unusedVariable2",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "idToOtcBid",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "paymentType",
-        "type": "uint8"
-      },
-      {
-        "internalType": "address payable",
-        "name": "bidder",
-        "type": "address"
-      },
-      {
-        "internalType": "address payable",
-        "name": "seller",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "nftAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unusedVariable1",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "expiresAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "sold",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "cancelled",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -749,9 +721,9 @@
         "type": "uint256[]"
       },
       {
-        "internalType": "uint256[]",
-        "name": "_expiresAt",
-        "type": "uint256[]"
+        "internalType": "uint256[][]",
+        "name": "_acceptPayment",
+        "type": "uint256[][]"
       }
     ],
     "name": "listNFT",
@@ -790,25 +762,6 @@
     "name": "newOtcBid",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "notEscrowOrder",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -970,7 +923,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "unusedVariable3",
+        "name": "createAt",
         "type": "uint256"
       },
       {
@@ -980,17 +933,17 @@
       },
       {
         "internalType": "uint256",
-        "name": "expiresAt",
+        "name": "unusedVariable2",
         "type": "uint256"
       },
       {
         "internalType": "bool",
-        "name": "unusedVariable4",
+        "name": "unusedVariable3",
         "type": "bool"
       },
       {
         "internalType": "bool",
-        "name": "unusedVariable2",
+        "name": "unusedVariable4",
         "type": "bool"
       }
     ],
@@ -1181,37 +1134,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "collectionManagerAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_oracle",
-        "type": "address"
-      }
-    ],
-    "name": "setManagerAndOracle",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bool",
-        "name": "_setPaused",
-        "type": "bool"
-      }
-    ],
-    "name": "setPaused",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "bytes4",
         "name": "interfaceId",
         "type": "bytes4"
@@ -1269,9 +1191,9 @@
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "_expiresAt",
-        "type": "uint256"
+        "internalType": "uint256[]",
+        "name": "_acceptPayment",
+        "type": "uint256[]"
       }
     ],
     "name": "updateOrder",
@@ -1283,16 +1205,16 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_wallet",
+        "name": "_newOracle",
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "fee",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "_usdcToken",
+        "type": "address"
       }
     ],
-    "name": "updateWallet",
+    "name": "updateSetting",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

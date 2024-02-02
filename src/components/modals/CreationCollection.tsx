@@ -179,8 +179,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   'border': `3px solid ${palette.primary.storm}`,
                   'boxShadow': 'inset 0px -1.86785px 0px rgba(0, 0, 0, 0.25)',
                   'marginRight': '18px',
-                  'fontFamily': 'Nexa',
-                  'fontWeight': 700,
+                  'fontFamily': 'Nexa-Bold',
                   'lineHeight': '34px',
                 }}
                 component="label"
@@ -202,8 +201,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   height: '45px',
                   boxShadow: 'inset 0px -1.86785px 0px rgba(0, 0, 0, 0.25)',
                   marginRight: '18px',
-                  fontFamily: 'Nexa',
-                  fontWeight: 700,
+                  fontFamily: 'Nexa-Bold',
                   lineHeight: '34px',
                 }}
                 component="label"
@@ -258,6 +256,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                 >
                   <Button
                     variant="contained"
+                    fullWidth
                     sx={{ borderRadius: '0px' }}
                     component="label"
                   >
@@ -354,7 +353,7 @@ export default function FullScreenDialog({ open, onClose }: SimpleDialogProps) {
                   }
                   variant="standard"
                 />
-                <Button variant="contained" type="submit">
+                <Button variant="contained" fullWidth type="submit">
                   {loading ? (
                     <CircularProgress size={30} sx={{ color: 'white' }} />
                   ) : (

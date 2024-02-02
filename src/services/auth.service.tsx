@@ -20,6 +20,7 @@ export type AccountType = {
   nonce: number;
   chainId: number;
   profile_link: string | null;
+  default_currency: string | null;
   is_verified: boolean;
   is_disabled: boolean;
   is_deleted: boolean;
@@ -74,8 +75,8 @@ export class AuthService extends BaseService {
       method: 'POST',
     }).then((response) => response.json());
 
-  static getUsers = (): Promise<GetUsersResultType> => {
-    return axios.get(`${baseURL}/users/`);
+  static getUsers = (params: any): Promise<any> => {
+    return axios.get(`${baseURL}/users`, { params });
   };
 
   static getUser = (address: string): Promise<GetUserResultType> => {

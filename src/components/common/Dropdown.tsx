@@ -1,56 +1,58 @@
-import { Box, Typography } from '@mui/material';
-import { menu, menuButton, menuItem } from '../../styles/profile';
+import { IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { menuItem } from '../../styles/profile';
 import { palette } from '../../theme/palette';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useState } from 'react';
+import { useIconButtonStyles } from '@/modules/manager/Helper';
 
-interface item {
-  title: string;
-  icon?: JSX.Element;
-  action(event: any): void;
+interface DropdownProps {
+  iconColor?: string;
+  data: { title: string; icon: JSX.Element; action: () => void }[];
 }
 
-interface dropdown {
-  handleShow(event: any): void;
-  show: boolean;
-  data: item[];
-}
-
-const Dropdown = ({ handleShow, show, data }: dropdown) => {
+const Dropdown = ({ data, iconColor }: DropdownProps) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const handleOpenMenu = (event: any) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+  const handleActionClick = (action: () => void) => {
+    action();
+    handleCloseMenu();
+  };
+  const classes = useIconButtonStyles();
   return (
     <>
-      <Box
-        onClick={(event) => {
-          handleShow(event);
-        }}
-        sx={menuButton}
+      <IconButton onClick={handleOpenMenu} classes={{ root: classes.root }}>
+        <MoreVertIcon
+          sx={{
+            color: iconColor || palette.primary.fire,
+          }}
+        />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
       >
-        <Box>
-          {' '}
-          <MoreVertIcon sx={{ cursor: 'pointer' }} />
-        </Box>
-      </Box>
-
-      {show && (
-        <Box sx={menu}>
-          {data?.map((item) => (
-            <Box
-              key={item?.title}
-              sx={menuItem}
-              onClick={(event) => {
-                item?.action(event);
-              }}
+        {data.map(({ title, icon, action }, index) => (
+          <MenuItem
+            key={index}
+            sx={menuItem}
+            onClick={() => handleActionClick(action)}
+          >
+            {icon}
+            <Typography
+              variant="lbl-md"
+              sx={{ color: palette.primary.storm, alignSelf: 'center' }}
             >
-              {item?.icon}
-              <Typography
-                variant="lbl-md"
-                sx={{ color: palette.primary.storm, alignSelf: 'flex-end' }}
-              >
-                {item?.title}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      )}
+              {title}
+            </Typography>
+          </MenuItem>
+        ))}
+      </Menu>
     </>
   );
 };

@@ -186,7 +186,6 @@ const ListNft = (props: Props) => {
         confirmBtn: 'Save',
       });
       handleClose();
-
       return;
     }
 
@@ -383,7 +382,11 @@ const ListNft = (props: Props) => {
                 }}
               >
                 <Box
-                  sx={{ position: 'absolute', right: 20, cursor: 'pointer' }}
+                  sx={{
+                    position: 'absolute',
+                    right: 20,
+                    cursor: `url("/images/cursor-pointer.svg"), auto`,
+                  }}
                   onClick={handleClose}
                 >
                   <Image src="/images/cross.svg" width={16} height={16} />
@@ -508,7 +511,7 @@ const ListNft = (props: Props) => {
                         inputProps={{
                           sx: {
                             fontSize: '18px',
-                            color: 'rgba(0, 0, 0, 0.24)',
+                            color: 'rgba(0, 0, 0, 0.9)',
                             with: '100%',
                           },
                         }}
@@ -661,11 +664,10 @@ const ListNft = (props: Props) => {
                           !userApproval)
                       }
                       variant="contained"
+                      fullWidth
                       onClick={handleClick}
                       sx={{
                         'borderRadius': '0%',
-                        'width': '100%',
-                        'maxWidth': '100%',
                         ':disabled': {
                           backgroundColor: '#F3523F',
                           color: 'white',

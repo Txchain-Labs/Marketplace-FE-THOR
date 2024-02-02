@@ -1,7 +1,7 @@
 .channel-preview__container {
   height: 56px;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: url('/images/cursor-pointer.svg'), auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -74,7 +74,7 @@
   margin-bottom: 14px;
 } */
 
-.channel-preview__content-name>div {
+.channel-preview__content-name > div {
   margin-right: 5px;
 }
 
