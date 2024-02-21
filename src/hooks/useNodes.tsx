@@ -1,4 +1,4 @@
-import { useContractRead, useNetwork, useContractReads } from 'wagmi';
+import { useContractRead, useAccount, useContractReads } from 'wagmi';
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import axios from 'axios';
 
@@ -207,7 +207,7 @@ export const useGetGameloopAssets = (userAddress: string) => {
 };
 
 export const useGetVRR4Origin = () => {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const originNodes = thorfiNfts('nodes', chain).filter(
     (value) => value.nodeType === 'ORIGIN'
   );

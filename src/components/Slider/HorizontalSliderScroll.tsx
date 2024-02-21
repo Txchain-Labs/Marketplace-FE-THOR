@@ -15,7 +15,7 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { useDispatch, useSelector } from 'react-redux';
 import { nftActions } from '../../redux/slices/dummyData';
-import { useNetwork } from 'wagmi';
+import { useAccount } from 'wagmi';
 import axios from 'axios';
 import LikeButton from '../../components/common/LikeButton';
 
@@ -82,7 +82,7 @@ export const HorizontalSliderScroll = (props: any) => {
   const [fetchNo, setFetchNo] = useState(1);
   const [firstFetch, setFirstFetch] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
 
   const router = useRouter();
   const dispatch = useDispatch();

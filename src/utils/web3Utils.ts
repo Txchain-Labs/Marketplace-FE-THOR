@@ -1,5 +1,5 @@
 import { BigNumber, ethers } from 'ethers';
-import { useNetwork } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { defaultChain } from './constants';
 
 // wei to deci
@@ -20,7 +20,7 @@ export const formatWei = (
 };
 
 export const useChain = () => {
-  let { chain } = useNetwork();
+  let { chain } = useAccount();
   if (chain === undefined) {
     chain = defaultChain;
   }

@@ -3,7 +3,7 @@ import {
   useContractRead,
   useContractReads,
   useContractWrite,
-  useNetwork,
+  useAccount,
 } from 'wagmi';
 import { getGamificationContractByChain, thorfiNfts } from '@/utils/constants';
 import ThorCapsuleNFTAbi from '@/../public/abi/ThorCapsuleNFT.json';
@@ -22,7 +22,7 @@ export function useCreateCapsules() {
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const dispatch = useDispatch();
   const contractAddress = getGamificationContractByChain(chain);
 
@@ -79,7 +79,7 @@ export function useCreateCapsules() {
 }
 
 export function useGetCapsule(capsuleTokenId: BigNumber) {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const { address } = useAccount();
 
   const baseContractRead = {
@@ -104,7 +104,7 @@ export function useGetCapsule(capsuleTokenId: BigNumber) {
 }
 
 export function useGetCapsules() {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const { address } = useAccount();
 
   const baseContractRead = {
@@ -155,7 +155,7 @@ export function useOpenCapsules() {
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const dispatch = useDispatch();
   const contractAddress = thorfiNfts('capsules', chain)[0].contract;
 

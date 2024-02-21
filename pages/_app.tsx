@@ -6,7 +6,7 @@ import { persistStore } from 'redux-persist';
 import { PersistGate } from 'redux-persist/integration/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiConfig } from 'wagmi';
+import { WagmiProvider } from 'wagmi';
 import { ToastContainer } from 'react-toastify';
 import { Box, Typography } from '@mui/material';
 
@@ -14,7 +14,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
 
 import { store } from '@/redux/store';
-import { client } from '@/wagmi';
+import { config } from '@/wagmi';
 import { useFontLoading } from '@/utils/common';
 
 import ThemeCustomization from '@/themes/ThemeCustomization';
@@ -45,7 +45,7 @@ function MyApp({ Component, pageProps, router }: AppProps) {
       <Head>
         <title>Capsule</title>
       </Head>
-      <WagmiConfig client={client}>
+      <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <Provider store={store}>
             <PersistGate persistor={persistor}>
@@ -105,7 +105,7 @@ function MyApp({ Component, pageProps, router }: AppProps) {
             </PersistGate>
           </Provider>
         </QueryClientProvider>
-      </WagmiConfig>
+      </WagmiProvider>
     </>
   );
 }

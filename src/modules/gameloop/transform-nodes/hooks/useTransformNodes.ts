@@ -3,7 +3,7 @@ import {
   useContractRead,
   useContractReads,
   useContractWrite,
-  useNetwork,
+  useAccount,
   usePrepareContractWrite,
 } from 'wagmi';
 import {
@@ -166,7 +166,7 @@ export function useStakeUnstakeDriftNodes() {
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const dispatch = useDispatch();
   const contractAddress = getGamificationContractByChain(chain);
 
@@ -251,7 +251,7 @@ export function useStakeUnstakeDriftNodes() {
 }
 
 export function useGamificationAllowance(nodeType: any) {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const gamificationContractAddress = getGamificationContractByChain(chain);
   const { address } = useAccount();
   const nftAddress =
@@ -279,7 +279,7 @@ export function useApproveGamification(nodeType: any) {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const dispatch = useDispatch();
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const gamificationContractAddress = getGamificationContractByChain(chain);
 
   const args = [gamificationContractAddress, true];
@@ -352,7 +352,7 @@ export function useApproveGamification(nodeType: any) {
 }
 
 export const useGetDriftKeycardCap = (nodeType: any) => {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
 
   return useContractRead({
     address: getGamificationContractByChain(chain),

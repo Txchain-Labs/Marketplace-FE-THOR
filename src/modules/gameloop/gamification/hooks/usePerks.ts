@@ -3,7 +3,7 @@ import {
   useContractRead,
   useContractReads,
   useContractWrite,
-  useNetwork,
+  useAccount,
 } from 'wagmi';
 import { getGamificationContractByChain, thorfiNfts } from '@/utils/constants';
 import ThorPerkNFTAbi from '@/../public/abi/ThorPerkNFT.json';
@@ -22,7 +22,7 @@ import { setTxnStatus, STATUS } from '@/redux/slices/transactionSlice';
 import { showToast, ToastSeverity } from '@/redux/slices/toastSlice';
 
 export function useGetPerk(perkTokenId: BigNumber) {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const { address } = useAccount();
 
   const baseContractRead = {
@@ -72,7 +72,7 @@ export function useGetPerk(perkTokenId: BigNumber) {
 }
 
 export function useGetPerks() {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const { address } = useAccount();
 
   const baseContractRead = {
@@ -146,7 +146,7 @@ export function useApplyNodePerk() {
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const dispatch = useDispatch();
   const contractAddress = getGamificationContractByChain(chain);
 

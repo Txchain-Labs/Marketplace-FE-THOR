@@ -1,10 +1,5 @@
 import { useEffect } from 'react';
-import {
-  useAccount,
-  useSignMessage,
-  useConnect,
-  useSwitchNetwork,
-} from 'wagmi';
+import { useAccount, useSignMessage, useConnect, useSwitchChain } from 'wagmi';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 
@@ -27,7 +22,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
   const { address = '' } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { token } = useSelector((state: RootState) => state.auth);
-  const { switchNetwork } = useSwitchNetwork();
+  const { chains, switchChain } = useSwitchChain();
   const chain = useChain();
 
   useEffect(() => {
@@ -42,7 +37,7 @@ function WalletConnect({ onClose }: SimpleDialogProps) {
     signMessageAsync,
     token,
     onClose,
-    switchNetwork,
+    switchChain,
     chain?.id,
   ]);
 

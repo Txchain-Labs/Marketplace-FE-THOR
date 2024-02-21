@@ -1,7 +1,9 @@
 import React, { FC } from 'react';
-import { useConnect, useSwitchNetwork } from 'wagmi';
-import { watchNetwork } from '@wagmi/core';
+import { useConnect, useSwitchChain } from 'wagmi';
+import { watchAccount } from '@wagmi/core';
 import { Stack, Button } from '@mui/material';
+import { config } from '@/wagmi';
+
 // import Brightness4Icon from '@mui/icons-material/Brightness4';
 // import Brightness7Icon from '@mui/icons-material/Brightness7';
 
@@ -32,15 +34,17 @@ const Navbar: FC<NavbarProps> = ({
   // const theme = useTheme();
   // const colorMode = React.useContext(ColorModeContext);
 
-  const { switchNetwork } = useSwitchNetwork();
+  const { switchChain } = useSwitchChain();
 
-  watchNetwork(() => {
-    switchNetwork?.(DEFAULT_CHAIN_ID);
+  watchAccount(config, {
+    onChange(data) {
+      switchChain(data.chainId);
+    },
   });
 
   useConnect({
-    onSuccess() {
-      switchNetwork?.(DEFAULT_CHAIN_ID);
+    onSuccess(data) {
+      switchChain(data.chainId);
     },
   });
 

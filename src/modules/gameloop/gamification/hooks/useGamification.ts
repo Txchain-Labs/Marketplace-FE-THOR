@@ -2,7 +2,7 @@ import {
   useAccount,
   useContractRead,
   useContractWrite,
-  useNetwork,
+  useAccount,
   usePrepareContractWrite,
 } from 'wagmi';
 import {
@@ -20,7 +20,7 @@ export function useGamificationAllowance(
   typeNFT: ThorfiNFTType,
   NFTContractAbi: any[]
 ) {
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const gamificationContractAddress = getGamificationContractByChain(chain);
   const { address } = useAccount();
 
@@ -43,7 +43,7 @@ export function useApproveGamification(
   const [isSuccess, setIsSuccess] = useState(false);
 
   const dispatch = useDispatch();
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const gamificationContractAddress = getGamificationContractByChain(chain);
 
   const args = [gamificationContractAddress, true];
@@ -112,7 +112,7 @@ export function useApproveGamificationToSpendThor(NFTContractAbi: any[]) {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const dispatch = useDispatch();
-  const { chain } = useNetwork();
+  const { chain } = useAccount();
   const gamificationContractAddress = getGamificationContractByChain(chain);
 
   const args = [gamificationContractAddress, true];
