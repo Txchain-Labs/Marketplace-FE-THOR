@@ -45,6 +45,8 @@ export type NFTItemType = {
   collection_address?: string;
   token_address?: string;
   token_id?: string;
+  metadata?: string;
+  token_uri?: string;
 };
 
 export const useGetAvaxBalance = () => {
@@ -727,18 +729,18 @@ export const useGetActiveBids = (bidderAddress: string) => {
 
 export function useGetNFTDetail(collectionAddress: string, tokenId: string) {
   const chain = useChain();
-  const fetchNFTDetail = async (chainId: number): Promise<NFTItemType[]> => {
+  const fetchNFTDetail = async (chainId: number): Promise<NFTItemType> => {
     try {
       const res = await axios.get(
         `${
           process.env.NEXT_PUBLIC_BACKEND_URL
         }/nfts/nftDetail/${chainId}/${collectionAddress?.toLowerCase()}/${tokenId}`
       );
-      return res.data.code === 200 ? res.data.data : [];
+      return res.data.code === 200 ? res.data.data : {} as NFTItemType;
     } catch (error) {
       console.log(error);
     }
-    return [];
+    return {} as NFTItemType;
   };
 
   return useQuery({
