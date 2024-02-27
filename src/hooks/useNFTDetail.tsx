@@ -740,7 +740,7 @@ export function useGetNFTDetail(collectionAddress: string, tokenId: string) {
     } catch (error) {
       console.log(error);
     }
-    return ({} as NFTItemType);
+    return {} as NFTItemType;
   };
 
   return useQuery({

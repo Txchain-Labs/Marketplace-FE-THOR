@@ -1181,8 +1181,9 @@ const NFTdetailV2 = () => {
     Number(nftId)
   );
 
-  //also changed this from const to var
-  var { data: tokenURI, refetch: refetchTokenURI } = useGetTokenURI(
+  //also changed this from const to const
+  let { data: tokenURI } = useGetTokenURI(collectionAddress, Number(nftId));
+  const { refetch: refetchTokenURI } = useGetTokenURI(
     collectionAddress,
     Number(nftId)
   );
@@ -1206,21 +1207,22 @@ const NFTdetailV2 = () => {
 
   const refetchTokenMetadata = async () => {
     //Fetch Metadata URI
-    var newData: any = await refetchTokenURI();
-    var newURI: string = newData.data;
+    const newData: any = await refetchTokenURI();
+    let newURI: string = newData.data;
 
     //Fetch Metadata itself
     if (newURI.includes('ipfs://')) {
       newURI = newURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
     }
-    var res = await axios.get(newURI);
-    var newMetadata = res.data; //already in JSON
+    const res = await axios.get(newURI);
+    const newMetadata = res.data; //already in JSON
 
     //If it hasn't changed, don't do anything
     if (JSON.stringify(newMetadata) === data.metadata) {
-      //console.log("same metadata");
+      //console.log('same metadata');
       return;
     } else {
+      //console.log('new metadata');
       //If it has changed, update data
       data.metadata = JSON.stringify(newMetadata);
       data.token_uri = newURI;
