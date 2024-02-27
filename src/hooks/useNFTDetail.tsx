@@ -736,11 +736,11 @@ export function useGetNFTDetail(collectionAddress: string, tokenId: string) {
           process.env.NEXT_PUBLIC_BACKEND_URL
         }/nfts/nftDetail/${chainId}/${collectionAddress?.toLowerCase()}/${tokenId}`
       );
-      return res.data.code === 200 ? res.data.data : {} as NFTItemType;
+      return res.data.code === 200 ? res.data.data : ({} as NFTItemType);
     } catch (error) {
       console.log(error);
     }
-    return {} as NFTItemType;
+    return ({} as NFTItemType);
   };
 
   return useQuery({
